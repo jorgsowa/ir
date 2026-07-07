@@ -745,7 +745,7 @@ static void ir_emit_vaddr(ir_ctx *ctx, FILE *f, ir_ref def, ir_insn *insn)
 
 static void ir_emit_vstore(ir_ctx *ctx, FILE *f, ir_insn *insn)
 {
-	if (ctx->use_lists[insn->op3].count != 1) {
+	if (!IR_IS_CONST_REF(insn->op3) && ctx->use_lists[insn->op3].count != 1) {
 		ir_insn *var;
 
 		IR_ASSERT(insn->op2 > 0);
@@ -811,7 +811,7 @@ static void ir_emit_c_call_conv(FILE *f, uint32_t flags)
 	}
 }
 
-static int ir_emit_func(ir_ctx *ctx, const char *name, FILE *f)
+static int ir_emit_c_func(ir_ctx *ctx, const char *name, FILE *f)
 {
 	ir_ref i, n, *p;
 	ir_insn *insn;
@@ -843,7 +843,10 @@ static int ir_emit_func(ir_ctx *ctx, const char *name, FILE *f)
 			} else {
 				fprintf(f, ", ");
 			}
-			fprintf(f, "%s %s", ir_type_cname[insn->type], ir_get_str(ctx, insn->op2));
+			fprintf(f, "%s", ir_type_cname[insn->type]);
+			if (insn->op2) {
+				fprintf(f, " %s", ir_get_str(ctx, insn->op2));
+			}
 		}
 	}
 	if (ctx->flags & IR_VARARG_FUNC) {
@@ -870,6 +873,7 @@ static int ir_emit_func(ir_ctx *ctx, const char *name, FILE *f)
 		IR_ASSERT(!(bb->flags & IR_BB_UNREACHABLE));
 		if (ctx->prev_ref[bb->end] == bb->start
 		 && bb->successors_count == 1
+		 && ctx->cfg_edges[bb->successors] != b
 		 && (ctx->ir_base[bb->end].op == IR_END || ctx->ir_base[bb->end].op == IR_LOOP_END)
 		 && !(bb->flags & (IR_BB_START|IR_BB_ENTRY|IR_BB_DESSA_MOVES))) {
 			bb->flags |= IR_BB_EMPTY;
@@ -1178,7 +1182,11 @@ static int ir_emit_func(ir_ctx *ctx, const char *name, FILE *f)
 					fprintf(f, ");\n");
 					break;
 				case IR_VA_ARG:
-					ir_emit_def_ref(ctx, f, i);
+					if (ctx->vregs[i]) {
+						ir_emit_def_ref(ctx, f, i);
+					} else {
+						fprintf(f, "\t");
+					}
 					fprintf(f, "va_arg(");
 					ir_emit_ref(ctx, f, insn->op2);
 					fprintf(f, ", %s);\n", ir_type_cname[insn->type]);
@@ -1190,6 +1198,14 @@ static int ir_emit_func(ir_ctx *ctx, const char *name, FILE *f)
 				case IR_GUARD_NOT:
 					ir_emit_guard(ctx, f, insn);
 					break;
+				case IR_RLOAD:
+				case IR_RSTORE:
+				case IR_ASM:
+				case IR_ASM_OUT:
+				case IR_ASM_GOTO:
+					fprintf(stderr, "ERROR: IR_%s is not implemented yet\n", ir_op_name[insn->op]);
+					exit(1);
+					return 0;
 				default:
 					IR_ASSERT(0 && "NIY instruction");
 					ctx->status = IR_ERROR_UNSUPPORTED_CODE_RULE;
@@ -1220,7 +1236,7 @@ static int ir_emit_func(ir_ctx *ctx, const char *name, FILE *f)
 
 int ir_emit_c(ir_ctx *ctx, const char *name, FILE *f)
 {
-	return ir_emit_func(ctx, name, f);
+	return ir_emit_c_func(ctx, name, f);
 }
 
 void ir_emit_c_func_decl(const char *name, uint32_t flags, ir_type ret_type, uint32_t params_count, const uint8_t *param_types, FILE *f)
