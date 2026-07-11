@@ -726,7 +726,11 @@ static void ir_emit_ijmp(ir_ctx *ctx, FILE *f, ir_insn *insn)
 
 static void ir_emit_alloca(ir_ctx *ctx, FILE *f, ir_ref def, ir_insn *insn)
 {
-	ir_emit_def_ref(ctx, f, def);
+	if (ctx->vregs[def]) {
+		ir_emit_def_ref(ctx, f, def);
+	} else {
+		fprintf(f, "\t");
+	}
 	fprintf(f, "(uintptr_t)alloca(");
 	ir_emit_ref(ctx, f, insn->op2);
 	fprintf(f, ");\n");
