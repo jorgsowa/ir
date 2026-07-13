@@ -1,0 +1,17 @@
+--TEST--
+004: alloca with unused result
+--ARGS--
+-O0 --emit-c
+--CODE--
+{
+	int32_t size = 10;
+	l_1 = START(l_4);
+	uintptr_t ret, l_2 = ALLOCA(l_1, size);
+	l_4 = RETURN(l_2);
+}
+--EXPECT--
+void test(void)
+{
+	(uintptr_t)alloca(10);
+	return;
+}
