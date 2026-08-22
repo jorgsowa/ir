@@ -30,6 +30,7 @@
 # include <dirent.h>
 # include <unistd.h>
 # include <signal.h>
+# include <errno.h>
 # if defined(__linux__) || defined(__sun)
 #  include <alloca.h>
 # endif
@@ -64,10 +65,20 @@ static int test_extension_len = 0;
 
 static const char *code_extension = NULL;
 static int code_extension_len = 0;
+static int jobs = 1;
 
 static char **files = NULL;
 static int files_count = 0;
 static int files_limit = 0;
+
+typedef enum _test_result {
+	TEST_RESULT_PASS = 0,
+	TEST_RESULT_WARN = 1,
+	TEST_RESULT_XFAIL = 2,
+	TEST_RESULT_FAIL = 3,
+	TEST_RESULT_SKIP = 4,
+	TEST_RESULT_BROKEN = 5
+} test_result;
 
 static void print_color(const char *s, color c)
 {
@@ -388,6 +399,186 @@ static int run_test(const char *filename, test *t, int show_diff)
 	return ret;
 }
 
+static int parse_jobs_arg(const char *value)
+{
+	char *end;
+	long parsed;
+
+	errno = 0;
+	parsed = strtol(value, &end, 10);
+	if (errno != 0 || !end || *end != 0 || parsed <= 0 || parsed > INT_MAX) {
+		return 0;
+	}
+	jobs = (int)parsed;
+	return 1;
+}
+
+static test_result run_test_case(const char *filename, test *t, int show_diff)
+{
+	if (skip_test(t)) {
+		return TEST_RESULT_SKIP;
+	}
+	if (run_test(filename, t, show_diff)) {
+		return t->xfail ? TEST_RESULT_WARN : TEST_RESULT_PASS;
+	}
+	return t->xfail ? TEST_RESULT_XFAIL : TEST_RESULT_FAIL;
+}
+
+static void print_result_line(test_result result, test *t, const char *filename)
+{
+	switch (result) {
+		case TEST_RESULT_SKIP:
+			print_color("SKIP", YELLOW);
+			printf(": %s [%s]\n", t->name, filename);
+			break;
+		case TEST_RESULT_PASS:
+			print_color("PASS", GREEN);
+			printf(": %s [%s]\n", t->name, filename);
+			break;
+		case TEST_RESULT_WARN:
+			print_color("WARN", YELLOW);
+			printf(": %s [%s] (warn: XFAIL section but test passes)\n", t->name, filename);
+			break;
+		case TEST_RESULT_XFAIL:
+			print_color("XFAIL", RED);
+			printf(": %s [%s]\n", t->name, filename);
+			break;
+		case TEST_RESULT_FAIL:
+			print_color("FAIL", RED);
+			printf(": %s [%s]\n", t->name, filename);
+			break;
+		case TEST_RESULT_BROKEN:
+			print_color("BROK", RED);
+			printf(": [%s]\n", filename);
+			break;
+	}
+}
+
+#ifndef _WIN32
+static void run_tests_in_parallel(test **parsed_tests, int show_diff,
+	int *passed, int *skipped, int *xfailed, int *warned, int *failed, int *broken,
+	int *xfailed_limit, int *warned_limit, int *failed_limit, int *broken_limit,
+	test ***xfailed_tests, test ***warned_tests, test ***failed_tests, char ***broken_tests)
+{
+	pid_t *pids;
+	int *running_ids;
+	int active = 0;
+	int next = 0;
+	int i;
+
+	pids = calloc((size_t)jobs, sizeof(pid_t));
+	running_ids = calloc((size_t)jobs, sizeof(int));
+	if (!pids || !running_ids) {
+		free(pids);
+		free(running_ids);
+		fprintf(stderr, "ERROR: Out of memory\n");
+		exit(1);
+	}
+
+	while (next < files_count || active > 0) {
+		while (next < files_count && active < jobs) {
+			test *t = parsed_tests[next];
+
+			if (!t) {
+				print_result_line(TEST_RESULT_BROKEN, &(test){0}, files[next]);
+				if (*broken >= *broken_limit) {
+					*broken_limit += 1024;
+					*broken_tests = realloc(*broken_tests, sizeof(char*) * (size_t)*broken_limit);
+				}
+				(*broken_tests)[(*broken)++] = files[next];
+				next++;
+				continue;
+			}
+
+			if (skip_test(t)) {
+				print_result_line(TEST_RESULT_SKIP, t, files[next]);
+				(*skipped)++;
+				next++;
+				continue;
+			}
+
+			{
+				pid_t pid = fork();
+				if (pid < 0) {
+					perror("fork");
+					free(pids);
+					free(running_ids);
+					exit(1);
+				} else if (pid == 0) {
+					test_result result = run_test_case(files[next], t, show_diff);
+					print_result_line(result, t, files[next]);
+					fflush(stdout);
+					_exit((int)result);
+				}
+
+				pids[active] = pid;
+				running_ids[active] = next;
+				active++;
+				next++;
+			}
+		}
+
+		if (active > 0) {
+			int status;
+			pid_t pid = wait(&status);
+
+			if (pid >= 0) {
+				int slot = -1;
+				test *t;
+				test_result result = TEST_RESULT_FAIL;
+
+				for (i = 0; i < active; i++) {
+					if (pids[i] == pid) {
+						slot = i;
+						break;
+					}
+				}
+				if (slot < 0) {
+					continue;
+				}
+				t = parsed_tests[running_ids[slot]];
+
+				if (WIFEXITED(status)) {
+					result = (test_result)WEXITSTATUS(status);
+				}
+
+				if (result == TEST_RESULT_PASS) {
+					(*passed)++;
+				} else if (result == TEST_RESULT_WARN) {
+					(*passed)++;
+					if (*warned >= *warned_limit) {
+						*warned_limit += 1024;
+						*warned_tests = realloc(*warned_tests, sizeof(test*) * (size_t)*warned_limit);
+					}
+					(*warned_tests)[(*warned)++] = t;
+				} else if (result == TEST_RESULT_XFAIL) {
+					if (*xfailed >= *xfailed_limit) {
+						*xfailed_limit += 1024;
+						*xfailed_tests = realloc(*xfailed_tests, sizeof(test*) * (size_t)*xfailed_limit);
+					}
+					(*xfailed_tests)[(*xfailed)++] = t;
+				} else {
+					if (*failed >= *failed_limit) {
+						*failed_limit += 1024;
+						*failed_tests = realloc(*failed_tests, sizeof(test*) * (size_t)*failed_limit);
+					}
+					(*failed_tests)[(*failed)++] = t;
+				}
+
+				active--;
+				if (slot < active) {
+					pids[slot] = pids[active];
+					running_ids[slot] = running_ids[active];
+				}
+			}
+		}
+	}
+
+	free(pids);
+	free(running_ids);
+}
+#endif
+
 static void add_file(char *name)
 {
 	if (files_count >= files_limit) {
@@ -528,6 +719,7 @@ static void print_help(const char *exe_name)
 	    "  --diff-cmd <cmd>         - diff command\n"
 	    "  --test-extension <ext>   - search test files with the given extension\n"
 	    "  --code-extension <ext>   - produce code files with the given extension\n"
+	    "  --jobs <n>               - number of tests to run in parallel\n"
 	    "  --show-diff              - show diff of the failed tests\n"
 	    "  --no-color               - disable color output\n"
 	    , exe_name);
@@ -582,6 +774,11 @@ int main(int argc, char **argv)
 		} else if (check_arg("--diff-cmd",        &diff_cmd,        argc, argv, &i, &bad_opt)) {
 		} else if (check_arg("--test-extension",  &test_extension,  argc, argv, &i, &bad_opt)) {
 		} else if (check_arg("--code-extension",  &code_extension,  argc, argv, &i, &bad_opt)) {
+		} else if (strcmp(argv[i], "--jobs") == 0) {
+			if (++i == argc || !parse_jobs_arg(argv[i])) {
+				bad_opt = 1;
+				fprintf(stderr, "ERROR: Invalid --jobs value\n");
+			}
 		} else if (strcmp(argv[i], "--show-diff") == 0) {
 			show_diff = 1;
 		} else if (strcmp(argv[i], "--no-color") == 0) {
@@ -636,63 +833,106 @@ int main(int argc, char **argv)
 
 	find_files(tests, tests_count);
 
-	// Run each test
-	for (i = 0; i < files_count; i++) {
-		t = parse_file(files[i], i);
-		if (!t) {
-			printf("\r");
-			print_color("BROK", RED);
-			printf(": [%s]\n", files[i]);
-			if (broken >= broken_limit) {
-				broken_limit += 1024;
-				broken_tests = realloc(broken_tests, sizeof(char*) * broken_limit);
-			}
-			broken_tests[broken++] = files[i];
-			continue;
+	{
+		test **parsed_tests;
+
+		parsed_tests = calloc((size_t)files_count, sizeof(test*));
+		if (!parsed_tests) {
+			fprintf(stderr, "ERROR: Out of memory\n");
+			return 1;
 		}
-		printf("TEST: %s [%s]", t->name, files[i]);
-		fflush(stdout);
-		if (skip_test(t)) {
-			printf("\r");
-			print_color("SKIP", YELLOW);
-			printf(": %s [%s]\n", t->name, files[i]);
-			skipped++;
-			free(t);
-		} else if (run_test(files[i], t, show_diff)) {
-			printf("\r");
-			passed++;
-			if (t->xfail) {
-				print_color("WARN", YELLOW);
-				printf(": %s [%s] (warn: XFAIL section but test passes)\n", t->name, files[i]);
-				if (warned >= warned_limit) {
-					warned_limit += 1024;
-					warned_tests = realloc(warned_tests, sizeof(test*) * warned_limit);
+
+		for (i = 0; i < files_count; i++) {
+			parsed_tests[i] = parse_file(files[i], i);
+		}
+
+#ifdef _WIN32
+		for (i = 0; i < files_count; i++) {
+			t = parsed_tests[i];
+			if (!t) {
+				print_result_line(TEST_RESULT_BROKEN, &(test){0}, files[i]);
+				if (broken >= broken_limit) {
+					broken_limit += 1024;
+					broken_tests = realloc(broken_tests, sizeof(char*) * broken_limit);
 				}
-				warned_tests[warned++] = t;
-			} else {
-				print_color("PASS", GREEN);
-				printf(": %s [%s]\n", t->name, files[i]);
-				free(t);
+				broken_tests[broken++] = files[i];
+				continue;
 			}
-		} else if (t->xfail) {
-			printf("\r");
-			print_color("XFAIL", RED);
-			printf(": %s [%s]\n", t->name, files[i]);
-			if (xfailed >= xfailed_limit) {
-				xfailed_limit += 1024;
-				xfailed_tests = realloc(xfailed_tests, sizeof(test*) * xfailed_limit);
+
+			{
+				test_result result = run_test_case(files[i], t, show_diff);
+				print_result_line(result, t, files[i]);
+				if (result == TEST_RESULT_SKIP) {
+					skipped++;
+				} else if (result == TEST_RESULT_PASS) {
+					passed++;
+					free(t);
+					parsed_tests[i] = NULL;
+				} else if (result == TEST_RESULT_WARN) {
+					passed++;
+					if (warned >= warned_limit) {
+						warned_limit += 1024;
+						warned_tests = realloc(warned_tests, sizeof(test*) * warned_limit);
+					}
+					warned_tests[warned++] = t;
+				} else if (result == TEST_RESULT_XFAIL) {
+					if (xfailed >= xfailed_limit) {
+						xfailed_limit += 1024;
+						xfailed_tests = realloc(xfailed_tests, sizeof(test*) * xfailed_limit);
+					}
+					xfailed_tests[xfailed++] = t;
+				} else {
+					if (failed >= failed_limit) {
+						failed_limit += 1024;
+						failed_tests = realloc(failed_tests, sizeof(test*) * failed_limit);
+					}
+					failed_tests[failed++] = t;
+				}
 			}
-			xfailed_tests[xfailed++] = t;
-		} else {
-			printf("\r");
-			print_color("FAIL", RED);
-			printf(": %s [%s]\n", t->name, files[i]);
-			if (failed >= failed_limit) {
-				failed_limit += 1024;
-				failed_tests = realloc(failed_tests, sizeof(test*) * failed_limit);
-			}
-			failed_tests[failed++] = t;
 		}
+#else
+		if (jobs < 1) {
+			jobs = 1;
+		}
+		run_tests_in_parallel(parsed_tests, show_diff,
+			&passed, &skipped, &xfailed, &warned, &failed, &broken,
+			&xfailed_limit, &warned_limit, &failed_limit, &broken_limit,
+			&xfailed_tests, &warned_tests, &failed_tests, &broken_tests);
+#endif
+
+		for (i = 0; i < files_count; i++) {
+			t = parsed_tests[i];
+			if (t && t->id == i) {
+				int keep = 0;
+				int j;
+				for (j = 0; j < xfailed; j++) {
+					if (xfailed_tests[j] == t) {
+						keep = 1;
+						break;
+					}
+				}
+				if (!keep) {
+					for (j = 0; j < warned; j++) {
+						if (warned_tests[j] == t) {
+							keep = 1;
+							break;
+						}
+					}
+				}
+				if (!keep) {
+					for (j = 0; j < failed; j++) {
+						if (failed_tests[j] == t) {
+							keep = 1;
+							break;
+						}
+					}
+				}
+				if (!keep) {
+					free(t);
+				}
+			}
+		}
+		free(parsed_tests);
 	}
 
 	// Produce the summary
