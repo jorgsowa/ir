@@ -7,6 +7,7 @@ BUILD_DIR  = .
 SRC_DIR    = .
 HAVE_LLVM  = no
 TESTS      = $(SRC_DIR)/tests
+JOBS      ?= $(shell getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 1)
 
 PREFIX     = /usr/local
 
@@ -125,11 +126,11 @@ $(BUILD_DIR)/tester: $(SRC_DIR)/tools/tester.c
 
 test: $(BUILD_DIR)/ir $(BUILD_DIR)/tester
 	$(BUILD_DIR)/tester --test-cmd $(BUILD_DIR)/ir --target $(TEST_TARGET) --default-args "--save" \
-		--test-extension ".irt" --code-extension ".ir" $(TESTS)
+		--test-extension ".irt" --code-extension ".ir" --jobs "$(JOBS)" $(TESTS)
 
 test-ci: $(BUILD_DIR)/ir $(BUILD_DIR)/tester
 	$(BUILD_DIR)/tester --test-cmd $(BUILD_DIR)/ir --target $(TEST_TARGET) --default-args "--save" \
-		--test-extension ".irt" --code-extension ".ir" --show-diff $(TESTS)
+		--test-extension ".irt" --code-extension ".ir" --jobs "$(JOBS)" --show-diff $(TESTS)
 
 clean:
 	rm -rf $(BUILD_DIR)/ir $(BUILD_DIR)/libir.a $(BUILD_DIR)/*.o \

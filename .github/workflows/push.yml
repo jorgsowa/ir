@@ -29,7 +29,7 @@ jobs:
       - name: make
         run: make BUILD=debug all
       - name: test
-        run: make BUILD=debug test-ci
+        run: make BUILD=debug JOBS="$(nproc)" test-ci
   Linux_x86_64_c11:
     name: 'Linux x86_64 -std=c11'
     runs-on: ubuntu-22.04
@@ -50,7 +50,7 @@ jobs:
       - name: make
         run: make BUILD=debug CFLAGS=-std=c11 all
       - name: test
-        run: make BUILD=debug CFLAGS=-std=c11 test-ci
+        run: make BUILD=debug CFLAGS=-std=c11 JOBS="$(nproc)" test-ci
   Linux_i386:
     name: 'Linux i386'
     runs-on: ubuntu-22.04
@@ -83,7 +83,7 @@ jobs:
       - name: make
         run: make TARGET=x86 BUILD=debug all
       - name: test
-        run: make TARGET=x86 BUILD=debug test-ci
+        run: make TARGET=x86 BUILD=debug JOBS="$(nproc)" test-ci
   Linux_aarch64:
     name: 'Linux aarch64'
     runs-on: ubuntu-22.04-arm
@@ -103,7 +103,7 @@ jobs:
       - name: make
         run: make BUILD=debug all
       - name: test
-        run: make BUILD=debug test-ci
+        run: make BUILD=debug JOBS="$(nproc)" test-ci
 
   FreeBSD_amd_64:
     name: 'FreeBSD amd64'
@@ -126,7 +126,7 @@ jobs:
 
           run: |
             gmake all
-            gmake test-ci
+            JOBS=$(sysctl -n hw.ncpu) gmake test-ci
 
   MACOS_x86_64:
     runs-on: macos-26-intel
@@ -139,7 +139,7 @@ jobs:
       - name: make
         run: make BUILD=debug all
       - name: test
-        run: make BUILD=debug test-ci
+        run: make BUILD=debug JOBS="$(sysctl -n hw.logicalcpu)" test-ci
 
   Windows:
     strategy:
@@ -178,4 +178,3 @@ jobs:
         shell: cmd
         run: |
           nmake -nologo -f win32/Makefile test-ci
-
