@@ -1,0 +1,13 @@
+--TEST--
+Darwin target triple
+--TARGET--
+aarch64-darwin
+--ARGS--
+--target
+--CODE--
+{
+	l_1 = START(l_2);
+	l_2 = RETURN(l_1);
+}
+--EXPECT--
+aarch64-darwin

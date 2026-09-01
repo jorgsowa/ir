@@ -1,0 +1,13 @@
+--TEST--
+Darwin JIT GDB registration
+--TARGET--
+aarch64-darwin
+--ARGS--
+-g --run
+--CODE--
+{
+	int32_t c_1 = 0;
+	l_1 = START(l_3);
+	l_3 = RETURN(l_1, c_1);
+}
+--EXPECT--

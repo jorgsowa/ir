@@ -1,0 +1,15 @@
+--TEST--
+Darwin emit-c conflicts with native code generation
+--TARGET--
+aarch64-darwin
+--ARGS--
+--emit-c --dump-size
+--CODE--
+{
+	l_1 = START(l_2);
+	l_2 = RETURN(l_1);
+}
+--EXPECT--
+ERROR: --emit-c and --emit-llvm are incompatible with native code generator (-S, --dump-size, --run)
+
+exit code = 1
