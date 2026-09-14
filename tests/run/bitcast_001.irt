@@ -1,5 +1,5 @@
 --TEST--
-BITCAST 001: regression float constant to integer bits
+BITCAST 001: float constant to integer bits
 --ARGS--
 -O0 --run
 --CODE--

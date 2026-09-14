@@ -1,5 +1,5 @@
 --TEST--
-SEXT 001: regression signed 32-bit constant extension
+SEXT 001: signed 32-bit constant extension
 --ARGS--
 -O0 --run
 --CODE--

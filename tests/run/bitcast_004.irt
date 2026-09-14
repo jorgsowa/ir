@@ -1,5 +1,5 @@
 --TEST--
-BITCAST 004: regression integer constant to double
+BITCAST 004: integer constant to double
 --ARGS--
 -O0 --run
 --CODE--

@@ -1,5 +1,5 @@
 --TEST--
-SEXT 002: extended paths for signed 8-bit and 16-bit constants
+SEXT 002: signed 8-bit and 16-bit constant extension
 --ARGS--
 -O0 --run
 --CODE--

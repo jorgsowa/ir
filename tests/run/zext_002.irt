@@ -1,5 +1,5 @@
 --TEST--
-ZEXT 002: extended paths for unsigned 8-bit and 16-bit constants
+ZEXT 002: unsigned 8-bit and 16-bit constant extension
 --ARGS--
 -O0 --run
 --CODE--

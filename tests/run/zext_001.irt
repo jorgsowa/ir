@@ -1,5 +1,5 @@
 --TEST--
-ZEXT 001: regression unsigned 32-bit constant extension
+ZEXT 001: unsigned 32-bit constant extension
 --ARGS--
 -O0 --run
 --CODE--
