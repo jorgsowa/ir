@@ -12,8 +12,12 @@ PREFIX     = /usr/local
 
 CC         = gcc
 BUILD_CC   = gcc
+PKG_CONFIG ?= pkg-config
+CAPSTONE_INCLUDEDIR ?= $(patsubst %/capstone,%,$(shell $(PKG_CONFIG) --variable=includedir capstone 2>/dev/null))
+CAPSTONE_LIBS ?= $(shell $(PKG_CONFIG) --libs capstone 2>/dev/null)
 override CFLAGS += -Wall -Wextra -Wno-unused-parameter
 override BUILD_CFLAGS += -Wall -Wextra -Wno-unused-parameter
+override CFLAGS += $(if $(CAPSTONE_INCLUDEDIR),-I$(CAPSTONE_INCLUDEDIR))
 LDFLAGS    = -lm -ldl
 LLK        = llk
 
@@ -101,7 +105,7 @@ $(BUILD_DIR)/libir.a: $(OBJS_COMMON)
 	ar r $@ $^
 
 $(BUILD_DIR)/ir: $(OBJS_IR) $(BUILD_DIR)/libir.a
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LLVM_LIBS) -lcapstone
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LLVM_LIBS) $(if $(CAPSTONE_LIBS),$(CAPSTONE_LIBS),-lcapstone)
 
 $(OBJS_COMMON): $(SRC_DIR)/ir.h $(SRC_DIR)/ir_private.h
 
