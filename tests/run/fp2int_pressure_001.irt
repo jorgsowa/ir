@@ -1,0 +1,59 @@
+--TEST--
+64-bit FP2INT under floating-point register pressure
+--ARGS--
+--run
+--CODE--
+extern func printf(uintptr_t, ...): int32_t;
+func convert(double, double, double, double, double, double, double, double, double): uint64_t
+{
+	l_1 = START(l_23);
+	double x = PARAM(l_1, "x", 1);
+	double a = PARAM(l_1, "a", 2);
+	double b = PARAM(l_1, "b", 3);
+	double c = PARAM(l_1, "c", 4);
+	double d = PARAM(l_1, "d", 5);
+	double e = PARAM(l_1, "e", 6);
+	double f = PARAM(l_1, "f", 7);
+	double g = PARAM(l_1, "g", 8);
+	double h = PARAM(l_1, "h", 9);
+	uint64_t r0 = FP2INT(x);
+	uint64_t r1 = FP2INT(a);
+	uint64_t r2 = FP2INT(b);
+	uint64_t r3 = FP2INT(c);
+	uint64_t r4 = FP2INT(d);
+	uint64_t r5 = FP2INT(e);
+	uint64_t r6 = FP2INT(f);
+	uint64_t r7 = FP2INT(g);
+	uint64_t r8 = FP2INT(h);
+	uint64_t s1 = ADD(r0, r1);
+	uint64_t s2 = ADD(r2, r3);
+	uint64_t s3 = ADD(r4, r5);
+	uint64_t s4 = ADD(r6, r7);
+	uint64_t s5 = ADD(s1, s2);
+	uint64_t s6 = ADD(s3, s4);
+	uint64_t s7 = ADD(s5, s6);
+	uint64_t result = ADD(s7, r8);
+	l_23 = RETURN(l_1, result);
+}
+func main(void): int32_t
+{
+	double c_x = 1000000000000;
+	double c_1 = 1;
+	double c_2 = 2;
+	double c_3 = 3;
+	double c_4 = 4;
+	double c_5 = 5;
+	double c_6 = 6;
+	double c_7 = 7;
+	double c_8 = 8;
+	uintptr_t c_convert = func convert(double, double, double, double, double, double, double, double, double): uint64_t;
+	uintptr_t c_printf = func printf(uintptr_t, ...): int32_t;
+	uintptr_t c_format = "%llu\n";
+	int32_t c_zero = 0;
+	l_1 = START(l_5);
+	uint64_t r_1, l_2 = CALL/9(l_1, c_convert, c_x, c_1, c_2, c_3, c_4, c_5, c_6, c_7, c_8);
+	int32_t r_2, l_3 = CALL/2(l_2, c_printf, c_format, r_1);
+	l_5 = RETURN(l_3, c_zero);
+}
+--EXPECT--
+1000000000036

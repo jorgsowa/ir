@@ -1,0 +1,40 @@
+--TEST--
+64-bit rotate helper arguments
+--ARGS--
+--run
+--CODE--
+extern func printf(uintptr_t, ...): int32_t;
+func rol64(int64_t, int64_t): int64_t
+{
+	l_1 = START(l_5);
+	int64_t x = PARAM(l_1, "x", 1);
+	int64_t n = PARAM(l_1, "n", 2);
+	int64_t r = ROL(x, n);
+	l_5 = RETURN(l_1, r);
+}
+func ror64(int64_t, int64_t): int64_t
+{
+	l_1 = START(l_5);
+	int64_t x = PARAM(l_1, "x", 1);
+	int64_t n = PARAM(l_1, "n", 2);
+	int64_t r = ROR(x, n);
+	l_5 = RETURN(l_1, r);
+}
+func main(void): int32_t
+{
+	int64_t c_x = 0x0123456789abcdef;
+	int64_t c_y = 0xfedcba9876543210;
+	int64_t c_n = 8;
+	uintptr_t c_rol64 = func rol64(int64_t, int64_t): int64_t;
+	uintptr_t c_ror64 = func ror64(int64_t, int64_t): int64_t;
+	uintptr_t c_printf = func printf(uintptr_t, ...): int32_t;
+	uintptr_t c_format = "%llx %llx\n";
+	int32_t c_zero = 0;
+	l_1 = START(l_6);
+	int64_t r_1, l_2 = CALL/2(l_1, c_rol64, c_x, c_n);
+	int64_t r_2, l_3 = CALL/2(l_2, c_ror64, c_y, c_n);
+	int32_t r_3, l_4 = CALL/3(l_3, c_printf, c_format, r_1, r_2);
+	l_6 = RETURN(l_4, c_zero);
+}
+--EXPECT--
+23456789abcdef01 10fedcba98765432
