@@ -1,0 +1,20 @@
+--TEST--
+001: Darwin dynamic TLS_ADDR resolves the module base
+--TARGET--
+aarch64-*-darwin
+--ARGS--
+-S
+--CODE--
+func tls_addr_dynamic(): uintptr_t
+{
+	l_1 = START(l_4);
+	uintptr_t ret = TLS_ADDR(16, 32);
+	l_4 = RETURN(l_1, ret);
+}
+--EXPECT--
+tls_addr_dynamic:
+	mrs x0, tpidrro_el0
+	and x0, x0, #0xfffffffffffffff8
+	ldr x0, [x0, #0x10]
+	add x0, x0, #0x20
+	ret
