@@ -1832,6 +1832,7 @@ static int parse_ir_insn(int sym, ir_parser_ctx *p) {
 			break;
 		case YY__LBRACE:
 			sym = get_sym();
+			if (!IR_IS_TYPE_VECTOR(t)) yy_error("vector type expected for constant initializer");
 			ref = ir_const_vector(p->ctx, t);
 			ptr = ir_long_const_ptr(p->ctx, ref);
 			memset(ptr, 0, IR_VECTOR_SIZE(t));
