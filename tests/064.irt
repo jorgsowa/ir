@@ -1,0 +1,10 @@
+--TEST--
+064: parser rejects empty brace initializer without vector type
+--CODE--
+{
+	l_1 = {};
+}
+--EXPECT--
+ERROR: vector type expected for constant initializer at line 2
+
+exit code = 2
