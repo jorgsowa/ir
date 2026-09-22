@@ -110,7 +110,7 @@ static bool aarch64_may_use_adrp(ir_code_buffer *code_buffer, const void *addr)
  * Used to guard the immediate encoding for add/adds/sub/subs/cmp/cmn instructions. */
 static bool aarch64_may_encode_imm12(const int64_t val)
 {
-	return (val >= 0 && (val <= 0xfff || (val >> 12) <= 0xfff));
+	return (val >= 0 && (val <= 0xfff || !(val & 0xffffffffff000fff)));
 }
 
 /* Determine whether an immediate value can be encoded as the immediate operand of logical instructions. */
@@ -2912,78 +2912,44 @@ static void ir_emit_binop_int(ir_ctx *ctx, ir_ref def, ir_insn *insn)
 	} else {
 		IR_ASSERT(IR_IS_CONST_REF(op2));
 		IR_ASSERT(!IR_IS_SYM_CONST(ctx->ir_base[op2].op));
-	uint64_t val = ir_type_size[type] == 8 ? ctx->ir_base[op2].val.u64 : ctx->ir_base[op2].val.u32;
+		int32_t val = ctx->ir_base[op2].val.i32;
 		switch (insn->op) {
 			default:
 				IR_ASSERT(0 && "NIY binary op");
 			case IR_ADD:
-				if (aarch64_may_encode_imm12(val)) {
-					|	ASM_REG_REG_IMM_OP add, type, def_reg, op1_reg, val
-				} else {
-					tmp_reg = ctx->regs[def][2];
-					IR_ASSERT(tmp_reg != IR_REG_NONE);
-					ir_emit_load_imm_int(ctx, type, tmp_reg, val);
-					|	ASM_REG_REG_REG_OP add, type, def_reg, op1_reg, tmp_reg
-				}
+				|	ASM_REG_REG_IMM_OP add, type, def_reg, op1_reg, val
 				break;
 			case IR_ADD_OV:
-				if (aarch64_may_encode_imm12(val)) {
-					|	ASM_REG_REG_IMM_OP adds, type, def_reg, op1_reg, val
-				} else {
-					tmp_reg = ctx->regs[def][2];
-					IR_ASSERT(tmp_reg != IR_REG_NONE);
-					ir_emit_load_imm_int(ctx, type, tmp_reg, val);
-					|	ASM_REG_REG_REG_OP adds, type, def_reg, op1_reg, tmp_reg
-				}
+				|	ASM_REG_REG_IMM_OP adds, type, def_reg, op1_reg, val
 				break;
 			case IR_SUB:
-				if (aarch64_may_encode_imm12(val)) {
-					|	ASM_REG_REG_IMM_OP sub, type, def_reg, op1_reg, val
-				} else {
-					tmp_reg = ctx->regs[def][2];
-					IR_ASSERT(tmp_reg != IR_REG_NONE);
-					ir_emit_load_imm_int(ctx, type, tmp_reg, val);
-					|	ASM_REG_REG_REG_OP sub, type, def_reg, op1_reg, tmp_reg
-				}
+				|	ASM_REG_REG_IMM_OP sub, type, def_reg, op1_reg, val
 				break;
 			case IR_SUB_OV:
-				if (aarch64_may_encode_imm12(val)) {
-					|	ASM_REG_REG_IMM_OP subs, type, def_reg, op1_reg, val
-				} else {
-					tmp_reg = ctx->regs[def][2];
-					IR_ASSERT(tmp_reg != IR_REG_NONE);
-					ir_emit_load_imm_int(ctx, type, tmp_reg, val);
-					|	ASM_REG_REG_REG_OP subs, type, def_reg, op1_reg, tmp_reg
-				}
+				|	ASM_REG_REG_IMM_OP subs, type, def_reg, op1_reg, val
 				break;
 			case IR_OR:
-				if (aarch64_may_encode_imm12(val)) {
+				if (ir_type_size[type] == 8) {
+					uint64_t val = ctx->ir_base[op2].val.u64;
 					|	ASM_REG_REG_IMM_OP orr, type, def_reg, op1_reg, val
 				} else {
-					tmp_reg = ctx->regs[def][2];
-					IR_ASSERT(tmp_reg != IR_REG_NONE);
-					ir_emit_load_imm_int(ctx, type, tmp_reg, val);
-					|	ASM_REG_REG_REG_OP orr, type, def_reg, op1_reg, tmp_reg
+					|	ASM_REG_REG_IMM_OP orr, type, def_reg, op1_reg, val
 				}
 				break;
 			case IR_AND:
-				if (aarch64_may_encode_imm12(val)) {
+				if (ir_type_size[type] == 8) {
+					uint64_t val = ctx->ir_base[op2].val.u64;
 					|	ASM_REG_REG_IMM_OP and, type, def_reg, op1_reg, val
 				} else {
-					tmp_reg = ctx->regs[def][2];
-					IR_ASSERT(tmp_reg != IR_REG_NONE);
-					ir_emit_load_imm_int(ctx, type, tmp_reg, val);
-					|	ASM_REG_REG_REG_OP and, type, def_reg, op1_reg, tmp_reg
+					|	ASM_REG_REG_IMM_OP and, type, def_reg, op1_reg, val
 				}
 				break;
 			case IR_XOR:
-				if (aarch64_may_encode_imm12(val)) {
+				if (ir_type_size[type] == 8) {
+					uint64_t val = ctx->ir_base[op2].val.u64;
 					|	ASM_REG_REG_IMM_OP eor, type, def_reg, op1_reg, val
 				} else {
-					tmp_reg = ctx->regs[def][2];
-					IR_ASSERT(tmp_reg != IR_REG_NONE);
-					ir_emit_load_imm_int(ctx, type, tmp_reg, val);
-					|	ASM_REG_REG_REG_OP eor, type, def_reg, op1_reg, tmp_reg
+					|	ASM_REG_REG_IMM_OP eor, type, def_reg, op1_reg, val
 				}
 				break;
 		}
@@ -3151,54 +3117,19 @@ static void ir_emit_reg_binop_int(ir_ctx *ctx, ir_ref def, ir_insn *insn)
 			default:
 				IR_ASSERT(0 && "NIY binary op");
 			case IR_ADD:
-				if (aarch64_may_encode_imm12(val->u64)) {
-					|	ASM_REG_REG_IMM_OP add, type, reg, reg, val->i32
-				} else {
-					ir_reg tmp_reg = ctx->regs[def][3];
-					IR_ASSERT(tmp_reg != IR_REG_NONE);
-					ir_emit_load_imm_int(ctx, type, tmp_reg, val->u64);
-					|	ASM_REG_REG_REG_OP add, type, reg, reg, tmp_reg
-				}
+				|	ASM_REG_REG_IMM_OP add, type, reg, reg, val->i32
 				break;
 			case IR_SUB:
-				if (aarch64_may_encode_imm12(val->u64)) {
-					|	ASM_REG_REG_IMM_OP sub, type, reg, reg, val->i32
-				} else {
-					ir_reg tmp_reg = ctx->regs[def][3];
-					IR_ASSERT(tmp_reg != IR_REG_NONE);
-					ir_emit_load_imm_int(ctx, type, tmp_reg, val->u64);
-					|	ASM_REG_REG_REG_OP sub, type, reg, reg, tmp_reg
-				}
+				|	ASM_REG_REG_IMM_OP sub, type, reg, reg, val->i32
 				break;
 			case IR_OR:
-				if (aarch64_may_encode_logical_imm(val->u64, type)) {
-					|	ASM_REG_REG_IMM_OP orr, type, reg, reg, val->i32
-				} else {
-					ir_reg tmp_reg = ctx->regs[def][3];
-					IR_ASSERT(tmp_reg != IR_REG_NONE);
-					ir_emit_load_imm_int(ctx, type, tmp_reg, val->u64);
-					|	ASM_REG_REG_REG_OP orr, type, reg, reg, tmp_reg
-				}
+				|	ASM_REG_REG_IMM_OP orr, type, reg, reg, val->i32
 				break;
 			case IR_AND:
-				if (aarch64_may_encode_logical_imm(val->u64, type)) {
-					|	ASM_REG_REG_IMM_OP and, type, reg, reg, val->i32
-				} else {
-					ir_reg tmp_reg = ctx->regs[def][3];
-					IR_ASSERT(tmp_reg != IR_REG_NONE);
-					ir_emit_load_imm_int(ctx, type, tmp_reg, val->u64);
-					|	ASM_REG_REG_REG_OP and, type, reg, reg, tmp_reg
-				}
+				|	ASM_REG_REG_IMM_OP and, type, reg, reg, val->i32
 				break;
 			case IR_XOR:
-				if (aarch64_may_encode_logical_imm(val->u64, type)) {
-					|	ASM_REG_REG_IMM_OP eor, type, reg, reg, val->i32
-				} else {
-					ir_reg tmp_reg = ctx->regs[def][3];
-					IR_ASSERT(tmp_reg != IR_REG_NONE);
-					ir_emit_load_imm_int(ctx, type, tmp_reg, val->u64);
-					|	ASM_REG_REG_REG_OP eor, type, reg, reg, tmp_reg
-				}
+				|	ASM_REG_REG_IMM_OP eor, type, reg, reg, val->i32
 				break;
 		}
 	} else {
