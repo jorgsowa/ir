@@ -1296,6 +1296,12 @@ ir_fold_const:
 
 ir_ref ir_fold(ir_ctx *ctx, uint32_t opt, ir_ref op1, ir_ref op2, ir_ref op3)
 {
+	ir_op op = opt & IR_OPT_OP_MASK;
+
+	if (op >= IR_LT && op <= IR_GT
+	 && IR_IS_TYPE_UNSIGNED(ctx->ir_base[op1].type)) {
+		opt = (opt & ~IR_OPT_OP_MASK) | (op + (IR_ULT - IR_LT));
+	}
 	if (UNEXPECTED(!(ctx->flags & IR_OPT_FOLDING))) {
 		if ((opt & IR_OPT_OP_MASK) == IR_PHI) {
 			opt |= (3 << IR_OPT_INPUTS_SHIFT);
