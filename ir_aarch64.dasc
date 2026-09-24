@@ -108,9 +108,9 @@ static bool aarch64_may_use_adrp(ir_code_buffer *code_buffer, const void *addr)
  *   Range 1: [0, 0xfff]
  *   Range 2: LSL #12 to Range 1
  * Used to guard the immediate encoding for add/adds/sub/subs/cmp/cmn instructions. */
-static bool aarch64_may_encode_imm12(const int64_t val)
+static bool aarch64_may_encode_imm12(uint64_t val)
 {
-	return (val >= 0 && (val <= 0xfff || !(val & 0xffffffffff000fff)));
+	return val <= 0xfff || (val <= 0xfff000 && !(val & 0xfff));
 }
 
 /* Determine whether an immediate value can be encoded as the immediate operand of logical instructions. */
@@ -3769,6 +3769,7 @@ static void ir_emit_cmp_int_common(ir_ctx *ctx, ir_type type, ir_reg op1_reg, ir
 	} else {
 		IR_ASSERT(IR_IS_CONST_REF(op2));
 		IR_ASSERT(!IR_IS_SYM_CONST(ctx->ir_base[op2].op));
+		IR_ASSERT(aarch64_may_encode_imm12(ctx->ir_base[op2].val.u64));
 		int32_t val = ctx->ir_base[op2].val.i32;
 
 		if (ir_type_size[type] == 8) {
