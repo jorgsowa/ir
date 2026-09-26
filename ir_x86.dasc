@@ -12297,6 +12297,7 @@ static void ir_emit_switch(ir_ctx *ctx, uint32_t b, ir_ref def, ir_insn *insn)
 	int label, default_label = 0;
 	int count = 0;
 	ir_val min, max;
+	uint64_t span;
 	ir_reg op2_reg = ctx->regs[def][2];
 	ir_reg tmp_reg = ctx->regs[def][3];
 	bool has_case_range = 0;
@@ -12328,8 +12329,8 @@ static void ir_emit_switch(ir_ctx *ctx, uint32_t b, ir_ref def, ir_insn *insn)
 				max.i64 = IR_MAX(max.i64, val->val.i64);
 			} else {
 				IR_ASSERT(!IR_IS_TYPE_SIGNED(val->type));
-				min.u64 = (int64_t)IR_MIN(min.u64, val->val.u64);
-				max.u64 = (int64_t)IR_MAX(max.u64, val->val.u64);
+				min.u64 = IR_MIN(min.u64, val->val.u64);
+				max.u64 = IR_MAX(max.u64, val->val.u64);
 			}
 			count++;
 		} else if (use_insn->op == IR_CASE_RANGE) {
@@ -12344,8 +12345,8 @@ static void ir_emit_switch(ir_ctx *ctx, uint32_t b, ir_ref def, ir_insn *insn)
 				max.i64 = IR_MAX(max.i64, val2->val.i64);
 			} else {
 				IR_ASSERT(!IR_IS_TYPE_SIGNED(val->type));
-				min.u64 = (int64_t)IR_MIN(min.u64, val->val.u64);
-				max.u64 = (int64_t)IR_MAX(max.u64, val2->val.u64);
+				min.u64 = IR_MIN(min.u64, val->val.u64);
+				max.u64 = IR_MAX(max.u64, val2->val.u64);
 			}
 		} else {
 			IR_ASSERT(use_insn->op == IR_CASE_DEFAULT);
@@ -12374,10 +12375,12 @@ static void ir_emit_switch(ir_ctx *ctx, uint32_t b, ir_ref def, ir_insn *insn)
 	}
 
 	/* Generate a table jmp or a seqence of calls */
-	if (!has_case_range && count > 2 && (max.i64-min.i64) < count * 8) {
-		int *labels = ir_mem_malloc(sizeof(int) * (size_t)(max.i64 - min.i64 + 1));
+	span = max.u64 - min.u64;
+	if (!has_case_range && count > 2 && (!IR_X86_I64 || ir_type_size[type] <= 4)
+	 && span <= 0x7fffffff && span < (uint64_t)count * 8) {
+		int *labels = ir_mem_malloc(sizeof(int) * (size_t)(span + 1));
 
-		for (i = 0; i <= (max.i64 - min.i64); i++) {
+		for (i = 0; i <= (int)span; i++) {
 			labels[i] = default_label;
 		}
 		p = &ctx->cfg_edges[bb->successors];
@@ -12388,7 +12391,7 @@ static void ir_emit_switch(ir_ctx *ctx, uint32_t b, ir_ref def, ir_insn *insn)
 				val = &ctx->ir_base[use_insn->op2];
 				IR_ASSERT(!IR_IS_SYM_CONST(val->op));
 				label = ir_skip_empty_target_blocks(ctx, use_block);
-				labels[val->val.i64 - min.i64] = label;
+				labels[val->val.u64 - min.u64] = label;
 			}
 		}
 
@@ -12428,22 +12431,22 @@ static void ir_emit_switch(ir_ctx *ctx, uint32_t b, ir_ref def, ir_insn *insn)
 		}
 
 		if (min.i64 != 0) {
-			int64_t offset = -min.i64;
+			ir_val offset;
 
-			if (IR_IS_SIGNED_32BIT(offset)) {
-				|	lea Ra(tmp_reg), [Ra(op2_reg)+(int32_t)offset]
+			offset.u64 = 0 - min.u64;
+
+			if (IR_IS_SIGNED_32BIT(offset.i64)) {
+				|	lea Ra(tmp_reg), [Ra(op2_reg)+offset.i32]
 			} else {
 				IR_ASSERT(sizeof(void*) == 8);
 |.if X64
-				|	mov64 Rq(tmp_reg), offset
+				|	mov64 Rq(tmp_reg), offset.i64
 				|	add Ra(tmp_reg), Ra(op2_reg)
 |.endif
 			}
 			if (default_label) {
-				offset = max.i64 - min.i64;
-
-				IR_ASSERT(IR_IS_SIGNED_32BIT(offset));
-				|	cmp Ra(tmp_reg), (int32_t)offset
+				IR_ASSERT(IR_IS_SIGNED_32BIT(span));
+				|	cmp Ra(tmp_reg), (int32_t)span
 				|	ja =>default_label
 			}
 |.if X64
@@ -12452,13 +12455,16 @@ static void ir_emit_switch(ir_ctx *ctx, uint32_t b, ir_ref def, ir_insn *insn)
 			 && IR_IS_SIGNED_32BIT((char*)ctx->code_buffer->end)) {
 				|	jmp aword [Ra(tmp_reg)*8+>1]
 			} else {
-				int64_t offset = -min.i64;
+				if (IR_IS_SIGNED_32BIT(offset.i64)
+				 && IR_IS_SIGNED_32BIT(offset.i64 * 8)) {
+					int32_t displacement = (int32_t)(offset.i64 * 8);
 
-				IR_ASSERT(IR_IS_SIGNED_32BIT(offset));
-				offset *= 8;
-				IR_ASSERT(IR_IS_SIGNED_32BIT(offset));
-				|	lea Ra(tmp_reg), aword [>1]
-				|	jmp aword [Ra(tmp_reg)+Ra(op2_reg)*8+offset]
+					|	lea Ra(tmp_reg), aword [>1]
+					|	jmp aword [Ra(tmp_reg)+Ra(op2_reg)*8+displacement]
+				} else {
+					|	lea Ra(op2_reg), aword [>1]
+					|	jmp aword [Ra(op2_reg)+Ra(tmp_reg)*8]
+				}
 			}
 |.else
 			|	jmp aword [Ra(tmp_reg)*4+>1]
@@ -12492,7 +12498,7 @@ static void ir_emit_switch(ir_ctx *ctx, uint32_t b, ir_ref def, ir_insn *insn)
 		}
 		|.align aword
 		|1:
-		for (i = 0; i <= (max.i64 - min.i64); i++) {
+		for (i = 0; i <= (int)span; i++) {
 			int b = labels[i];
 			if (b) {
 				ir_block *bb = &ctx->cfg_blocks[b];
