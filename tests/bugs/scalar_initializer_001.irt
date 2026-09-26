@@ -1,0 +1,9 @@
+--TEST--
+scalar initializer for non-vector constant must not assert
+--ARGS--
+-fsyntax-only
+--CODE--
+{
+	float c_1 = {
+}
+--EXPECT--
