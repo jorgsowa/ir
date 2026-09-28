@@ -191,9 +191,9 @@ static int dasm_imm13(int lo, int hi)
   unsigned long long n = (((unsigned long long)hi) << 32) | (unsigned int)lo;
   unsigned long long m = 1ULL, a, b, c;
   if (n & 1) { n = ~n; inv = 1; }
-  a = n & (unsigned long long)-(long long)n;
-  b = (n+a)&(unsigned long long)-(long long)(n+a);
-  c = (n+a-b)&(unsigned long long)-(long long)(n+a-b);
+  a = n & -n;
+  b = (n+a) & -(n+a);
+  c = (n+a-b) & -(n+a-b);
   xa = dasm_ffs(a); xb = dasm_ffs(b);
   if (c) {
     w = dasm_ffs(c) - xa;
@@ -570,4 +570,3 @@ int dasm_checkstep(Dst_DECL, int secmatch)
   return D->status;
 }
 #endif
-

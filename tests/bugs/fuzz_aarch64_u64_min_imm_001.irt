@@ -1,0 +1,44 @@
+--TEST--
+AArch64: fused u64 compare loads non-imm12 constant
+--TARGET--
+aarch64-darwin
+--ARGS--
+-O1 --save-ir-codegen --dump-size
+--CODE--
+{
+	uint64_t c_1 = 9223372036854775808;
+	l_1 = START(l_11);
+	l_2 = END(l_1);
+	l_3 = LOOP_BEGIN(l_2, l_9);
+	uint64_t d_4 = PHI(l_3, c_1, d_5);
+	uint64_t d_5 = OR(d_4, c_1);
+	bool d_6 = NE(d_5, c_1);
+	l_7 = IF(l_3, d_6);
+	l_8 = IF_TRUE(l_7);
+	l_9 = LOOP_END(l_8);
+	l_10 = IF_FALSE(l_7);
+	l_11 = RETURN(l_10, d_5);
+}
+--EXPECT--
+{
+	uintptr_t c_1 = 0;
+	bool c_2 = 0;
+	bool c_3 = 1;
+	uint64_t c_4 = 9223372036854775808;
+#BB1: end=l_2, succ(1)=[BB2]
+	l_1 = START(l_11); # RULE(NOP:SKIPPED)
+	l_2 = END(l_1); # RULE(END)
+	# DESSA MOV c_4 -> d_4 {R1} {%x0}
+#BB2: end=l_7, idom=BB1(1), loop=HDR(1), pred(2)=[BB1, BB3], succ(2)=[BB3, BB4]
+	l_3 = LOOP_BEGIN(l_2, l_9); # RULE(NOP:SKIPPED)
+	uint64_t d_4 {R1} {%x0} = PHI(l_3, c_4, d_5 {R1} {%x0}); # RULE(PHI)
+	uint64_t d_5 {R1} {%x0} = OR(d_4 {R1} {%x0}, c_4); # RULE(BINOP_INT)
+	bool d_6 = NE(d_5 {R1} {%x0}, c_4 {%x1:load}); # RULE(CMP_INT:FUSED)
+	l_7 = IF(l_3, d_6); # RULE(CMP_AND_BRANCH_INT)
+	# IF_TRUE BB2, IF_FALSE BB4
+#BB4: end=l_11, idom=BB2(2), pred(1)=[BB2]
+	l_10 = IF_FALSE(l_7); # RULE(NOP:SKIPPED)
+	l_11 = RETURN(l_10, d_5 {R1} {%x0}); # RULE(RETURN_INT)
+}
+
+code size = 72
