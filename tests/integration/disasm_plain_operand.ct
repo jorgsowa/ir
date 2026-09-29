@@ -1,0 +1,12 @@
+--TEST--
+Disassembly preserves an operand without hexadecimal values
+--CODE--
+#include "tests/support/disasm_mock.c"
+
+int main(void)
+{
+	mock_instruction("mov", "plain");
+	return mock_expect("\tmov plain\n");
+}
+--EXPECT--
+ok
