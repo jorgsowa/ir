@@ -1,0 +1,14 @@
+--TEST--
+O0 FP constant binary op must not assert
+--ARGS--
+-O0 --run
+--CODE--
+func main(void): int32_t
+{
+	float c_1 = 1.0;
+	int32_t c_2 = 0;
+	l_1 = START(l_3);
+	float d_2 = ADD(c_1, c_1);
+	l_3 = RETURN(l_1, c_2);
+}
+--EXPECT--

@@ -1,0 +1,23 @@
+--TEST--
+64-bit high-bit logical immediate must not overflow
+--ARGS--
+-O1 -fno-inline --run
+--CODE--
+func test(uint64_t): uint64_t
+{
+	uint64_t c_1 = 9223372036854775808;
+	l_1 = START(l_4);
+	uint64_t d_2 = PARAM(l_1, "x", 1);
+	uint64_t d_3 = AND(d_2, c_1);
+	l_4 = RETURN(l_1, d_3);
+}
+func main(void): int32_t
+{
+	uint64_t c_1 = 18446744073709551615;
+	int32_t c_2 = 0;
+	uintptr_t c_3 = func test(uint64_t): uint64_t;
+	l_1 = START(l_4);
+	uint64_t d_2, l_2 = CALL/1(l_1, c_3, c_1);
+	l_4 = RETURN(l_2, c_2);
+}
+--EXPECT--
