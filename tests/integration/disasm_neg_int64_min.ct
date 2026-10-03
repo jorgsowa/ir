@@ -1,0 +1,13 @@
+--TEST--
+Disassembly handles negated INT64_MIN
+--CODE--
+#include "tests/support/disasm_mock.c"
+
+int main(void)
+{
+	mock_negative_hex(UINT64_C(0x8000000000000000));
+	ir_disasm_add_symbol("boundary", 0, 1);
+	return mock_expect("boundary");
+}
+--EXPECT--
+ok

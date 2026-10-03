@@ -1,0 +1,13 @@
+--TEST--
+Disassembly resolves a negative hexadecimal operand
+--CODE--
+#include "tests/support/disasm_mock.c"
+
+int main(void)
+{
+	mock_negative_hex(UINT64_C(1));
+	ir_disasm_add_symbol("last32", UINT64_C(0xffffffff), 1);
+	return mock_expect("last32");
+}
+--EXPECT--
+ok

@@ -1,0 +1,61 @@
+--TEST--
+OR and XOR with sign-bit logical immediates
+--ARGS--
+-O1 -fno-inline --run
+--CODE--
+extern func printf(uintptr_t, ...): int32_t;
+func or32(uint32_t): uint32_t
+{
+	uint32_t c_1 = 2147483648;
+	l_1 = START(l_4);
+	uint32_t d_2 = PARAM(l_1, "x", 1);
+	uint32_t d_3 = OR(d_2, c_1);
+	l_4 = RETURN(l_1, d_3);
+}
+func xor32(uint32_t): uint32_t
+{
+	uint32_t c_1 = 2147483648;
+	l_1 = START(l_4);
+	uint32_t d_2 = PARAM(l_1, "x", 1);
+	uint32_t d_3 = XOR(d_2, c_1);
+	l_4 = RETURN(l_1, d_3);
+}
+func or64(uint64_t): uint64_t
+{
+	uint64_t c_1 = 9223372036854775808;
+	l_1 = START(l_4);
+	uint64_t d_2 = PARAM(l_1, "x", 1);
+	uint64_t d_3 = OR(d_2, c_1);
+	l_4 = RETURN(l_1, d_3);
+}
+func xor64(uint64_t): uint64_t
+{
+	uint64_t c_1 = 12297829382473034410;
+	l_1 = START(l_4);
+	uint64_t d_2 = PARAM(l_1, "x", 1);
+	uint64_t d_3 = XOR(d_2, c_1);
+	l_4 = RETURN(l_1, d_3);
+}
+func main(void): int32_t
+{
+	uint32_t c_1 = 0;
+	uint32_t c_2 = 4294967295;
+	uint64_t c_3 = 0;
+	uint64_t c_4 = 18446744073709551615;
+	int32_t c_5 = 0;
+	uintptr_t c_6 = func or32(uint32_t): uint32_t;
+	uintptr_t c_7 = func xor32(uint32_t): uint32_t;
+	uintptr_t c_8 = func or64(uint64_t): uint64_t;
+	uintptr_t c_9 = func xor64(uint64_t): uint64_t;
+	uintptr_t c_10 = "%x %x %llx %llx\n";
+	uintptr_t c_11 = func printf(uintptr_t, ...): int32_t;
+	l_1 = START(l_7);
+	uint32_t d_2, l_2 = CALL/1(l_1, c_6, c_1);
+	uint32_t d_3, l_3 = CALL/1(l_2, c_7, c_2);
+	uint64_t d_4, l_4 = CALL/1(l_3, c_8, c_3);
+	uint64_t d_5, l_5 = CALL/1(l_4, c_9, c_4);
+	int32_t d_6, l_6 = CALL/5(l_5, c_11, c_10, d_2, d_3, d_4, d_5);
+	l_7 = RETURN(l_6, c_5);
+}
+--EXPECT--
+80000000 7fffffff 8000000000000000 5555555555555555

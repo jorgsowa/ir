@@ -7,6 +7,7 @@ BUILD_DIR  = .
 SRC_DIR    = .
 HAVE_LLVM  = no
 TESTS      = $(SRC_DIR)/tests
+C_TESTS    = $(SRC_DIR)/tests/integration
 
 PREFIX     = /usr/local
 
@@ -133,13 +134,21 @@ $(OBJS_COMMON) $(OBJS_IR): $(BUILD_DIR)/$(notdir %.o): $(SRC_DIR)/$(notdir %.c)
 $(BUILD_DIR)/tester: $(SRC_DIR)/tools/tester.c
 	$(CC) $(BUILD_CFLAGS) -o $@ $<
 
+C_TEST_ENV = IR_C_TEST_CC="$(CC)" IR_C_TEST_CFLAGS="$(filter-out -DIR_TARGET_TRIPLET=%,$(CFLAGS))" \
+	IR_C_TEST_SRC_DIR="$(SRC_DIR)" IR_C_TEST_BUILD_DIR="$(BUILD_DIR)" \
+	IR_C_TEST_LIB="$(BUILD_DIR)/libir.a" IR_C_TEST_LDFLAGS="$(LDFLAGS) $(LLVM_LIBS) -lcapstone"
+C_TEST_CMD = $(BUILD_DIR)/tester --test-cmd "sh $(SRC_DIR)/tools/run_c_test.sh" \
+	--test-extension ".ct" --code-extension ".case.c"
+
 test: $(BUILD_DIR)/ir $(BUILD_DIR)/tester
 	$(BUILD_DIR)/tester --test-cmd $(BUILD_DIR)/ir --target $(TARGET_TRIPLET) --default-args "--save" \
 		--test-extension ".irt" --code-extension ".ir" $(TESTS)
+	$(C_TEST_ENV) $(C_TEST_CMD) $(C_TESTS)
 
 test-ci: $(BUILD_DIR)/ir $(BUILD_DIR)/tester
 	$(BUILD_DIR)/tester --test-cmd $(BUILD_DIR)/ir --target $(TARGET_TRIPLET) --default-args "--save" \
 		--test-extension ".irt" --code-extension ".ir" --show-diff $(TESTS)
+	$(C_TEST_ENV) $(C_TEST_CMD) --show-diff $(C_TESTS)
 
 clean:
 	rm -rf $(BUILD_DIR)/ir $(BUILD_DIR)/libir.a $(BUILD_DIR)/*.o \
@@ -150,6 +159,7 @@ clean:
 	find $(SRC_DIR)/tests -type f -name '*.out' -delete
 	find $(SRC_DIR)/tests -type f -name '*.exp' -delete
 	find $(SRC_DIR)/tests -type f -name '*.ir' -delete
+	find $(SRC_DIR)/tests/integration -type f -name '*.case.c' -delete
 
 install: $(BUILD_DIR)/ir $(BUILD_DIR)/libir.a
 	install -m a+rx $(BUILD_DIR)/ir $(PREFIX)/bin
