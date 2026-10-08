@@ -1,0 +1,27 @@
+--TEST--
+CTPOP of constant operands
+--ARGS--
+--run
+--CODE--
+extern func @printf(uintptr_t, ...): int32_t;
+func @main(): int32_t
+{
+	uintptr_t fp = func @printf(uintptr_t, ...): int32_t;
+	uintptr_t fmt = "%d %d %d %lld\n";
+	int8_t c8 = -1;
+	int16_t c16 = 255;
+	int32_t c32 = 7;
+	int64_t c64 = 0x7000000000000001;
+	int32_t z = 0;
+	l_1 = START(l_3);
+	int8_t r8 = CTPOP(c8);
+	int16_t r16 = CTPOP(c16);
+	int32_t r32 = CTPOP(c32);
+	int64_t r64 = CTPOP(c64);
+	int32_t e8 = SEXT(r8);
+	int32_t e16 = SEXT(r16);
+	l_2 = CALL/5(l_1, fp, fmt, e8, e16, r32, r64);
+	l_3 = RETURN(l_2, z);
+}
+--EXPECT--
+8 8 3 4
