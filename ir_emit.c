@@ -871,17 +871,16 @@ static int ir_dessa_parallel_copy(ir_ctx *ctx, ir_dessa_copy *copies, int count,
 	while ((to = ir_bitset_first(ready, len)) >= 0) {
 		ir_bitset_clear(visited, len);
 		ir_bitset_incl(visited, to);
-		to = pred[to];
-		while (!IR_IS_CONST_REF(to) && ir_bitset_in(ready, to)) {
-			to = pred[to];
-			IR_ASSERT(!IR_IS_CONST_REF(to));
-			if (ir_bitset_in(visited, to)) {
+		from = pred[to];
+		/* chains ending with a constant are not cycles, they are resolved as trees below */
+		while (!IR_IS_CONST_REF(from) && ir_bitset_in(ready, from)) {
+			if (ir_bitset_in(visited, from)) {
 				/* We found a cycle. Resolve it. */
-				ir_bitset_incl(visited, to);
-				ir_dessa_resolve_cycle(ctx, mem_slots, pred, loc, types, todo, to, tmp_reg, tmp_fp_reg);
+				ir_dessa_resolve_cycle(ctx, mem_slots, pred, loc, types, todo, from, tmp_reg, tmp_fp_reg);
 				break;
 			}
-			ir_bitset_incl(visited, to);
+			ir_bitset_incl(visited, from);
+			from = pred[from];
 		}
 		ir_bitset_difference(ready, visited, len);
 	}

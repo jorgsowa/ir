@@ -1,0 +1,36 @@
+--TEST--
+DESSA: chain of PHI moves started from a constant and ending in the temporary register
+--ARGS--
+-O1 --run
+--CODE--
+extern func @printf(uintptr_t, ...): int32_t;
+func @main(): int32_t
+{
+	uintptr_t c_p = func @printf(uintptr_t, ...): int32_t;
+	uintptr_t c_f = "%d %d %d %d\n";
+	int32_t c_0 = 0;
+	int32_t c_1 = 1;
+	int32_t c_2 = 2;
+	int32_t c_3 = 3;
+	int32_t c_4 = 4;
+	int32_t c_9 = 9;
+	l_1 = START(l_ret);
+	l_2 = END(l_1);
+	l_3 = LOOP_BEGIN(l_2, l_le);
+	int32_t a = PHI(l_3, c_1, d);
+	int32_t b = PHI(l_3, c_2, c);
+	int32_t c = PHI(l_3, c_3, q);
+	int32_t d = PHI(l_3, c_4, c_9);
+	int32_t i = PHI(l_3, c_0, i1);
+	int32_t i1 = ADD(i, c_1);
+	bool cond = LT(i1, c_3);
+	l_4 = IF(l_3, cond);
+	l_5 = IF_TRUE(l_4);
+	int32_t q = ADD(b, c_3);
+	l_le = LOOP_END(l_5);
+	l_6 = IF_FALSE(l_4);
+	int32_t r, l_7 = CALL/5(l_6, c_p, c_f, a, b, c, d);
+	l_ret = RETURN(l_7, c_0);
+}
+--EXPECT--
+9 5 6 9
