@@ -1,0 +1,29 @@
+--TEST--
+Simple register allocator: VAR is read through VADDR
+--ARGS--
+-O0 --run
+--CODE--
+extern func @printf(uintptr_t, ...): int32_t;
+func @main(): int32_t
+{
+	uintptr_t c_p = func @printf(uintptr_t, ...): int32_t;
+	uintptr_t c_f = "%d %d\n";
+	int32_t c_0 = 0;
+	int32_t c_1 = 1;
+	int32_t c_5 = 5;
+	l_1 = START(l_ret);
+	int32_t x = VAR(l_1, "x");
+	int32_t y = VAR(l_1, "y");
+	l_2 = VSTORE(l_1, x, c_5);
+	l_2a = VSTORE(l_2, y, c_5);
+	int32_t a, l_3 = VLOAD(l_2a, y);
+	int32_t v = ADD(a, c_1);
+	uintptr_t px = VADDR(x);
+	int32_t old, l_4 = LOAD(l_3, px);
+	l_5 = VSTORE(l_4, x, v);
+	int32_t b, l_6 = VLOAD(l_5, x);
+	int32_t r, l_7 = CALL/3(l_6, c_p, c_f, old, b);
+	l_ret = RETURN(l_7, c_0);
+}
+--EXPECT--
+5 6

@@ -1548,6 +1548,19 @@ static void ir_set_fused_reg(ir_ctx *ctx, ir_ref root, ir_ref ref_and_op, int8_t
 	ir_strtab_lookup(ctx->fused_regs, key, 8, 0x10000000 | (uint8_t)reg);
 }
 
+static bool ir_var_addr_is_taken(ir_ctx *ctx, ir_ref var)
+{
+	ir_use_list *use_list = &ctx->use_lists[var];
+	ir_ref *p, n = use_list->count;
+
+	for (p = ctx->use_edges + use_list->refs; n > 0; p++, n--) {
+		if (ctx->ir_base[*p].op == IR_VADDR) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
 static bool ir_load_may_reuse_var_slot(ir_ctx *ctx, ir_block *bb, ir_ref var, ir_ref load)
 {
 	ir_use_list *use_list = &ctx->use_lists[load];
@@ -1555,6 +1568,9 @@ static bool ir_load_may_reuse_var_slot(ir_ctx *ctx, ir_block *bb, ir_ref var, ir
 	ir_ref last_use = IR_UNUSED;
 	ir_insn *insn;
 
+	if (ir_var_addr_is_taken(ctx, var)) {
+		return 0;
+	}
 	if (n) {
 		for (p = ctx->use_edges + use_list->refs; n > 0; p++, n--) {
 			use = *p;
@@ -1575,15 +1591,36 @@ static bool ir_load_may_reuse_var_slot(ir_ctx *ctx, ir_block *bb, ir_ref var, ir
 
 static bool ir_store_may_reuse_var_slot(ir_ctx *ctx, ir_block *bb, ir_ref var, ir_ref store, ir_ref val)
 {
-	ir_ref i, n;
-	ir_insn *insn;
+	ir_ref i, j, n, *p;
+	ir_insn *insn, *input;
 
-	if (val < bb->start && val > store) return 0;
+	/* "val" overwrites the variable slot at its definition, so the store must follow on the same path */
+	if (store < val || store > bb->end || ir_var_addr_is_taken(ctx, var)) {
+		return 0;
+	}
 
-	for (i = val, insn = &ctx->ir_base[i]; i < store;) {
-		if ((insn->op == IR_VLOAD || insn->op == IR_VLOAD_v || insn->op == IR_VSTORE || insn->op == IR_VSTORE_v)
+	for (i = val, insn = &ctx->ir_base[i]; i <= store;) {
+		if (i < store
+		 && (insn->op == IR_VLOAD || insn->op == IR_VLOAD_v || insn->op == IR_VSTORE || insn->op == IR_VSTORE_v)
 		 && insn->op2 == var) {
 			return 0;
+		}
+		if (i > val) {
+			/* an earlier VLOAD may keep its value in the variable slot */
+			j = insn->inputs_count;
+			p = insn->ops + 1;
+			if (ir_op_flags[insn->op] & (IR_OP_FLAG_CONTROL|IR_OP_FLAG_MEM|IR_OP_FLAG_PINNED)) {
+				j--;
+				p++;
+			}
+			for (; j > 0; j--, p++) {
+				if (*p > 0 && *p < val) {
+					input = &ctx->ir_base[*p];
+					if ((input->op == IR_VLOAD || input->op == IR_VLOAD_v) && input->op2 == var) {
+						return 0;
+					}
+				}
+			}
 		}
 		n = ir_insn_len(insn);
 		i += n;
