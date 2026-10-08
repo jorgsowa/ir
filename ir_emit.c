@@ -1535,6 +1535,21 @@ static ir_reg _get_free_reg2(ir_ctx *ctx, ir_type type, ir_reg_alloc_simple_data
 	return reg;
 }
 
+static int32_t ir_find_same_input_reg(ir_reg_alloc_simple_data *x, ir_insn *insn, ir_ref ref, ir_ref op)
+{
+	int32_t k;
+
+	for (k = 0; k < x->num; k++) {
+		if (x->regs[k].ref == ref && !x->regs[k].root
+		 && x->regs[k].op > 0 && x->regs[k].op < op
+		 && x->regs[k].hint == IR_REG_NONE
+		 && insn->ops[x->regs[k].op] == insn->ops[op]) {
+			return k;
+		}
+	}
+	return -1;
+}
+
 static void ir_set_fused_reg(ir_ctx *ctx, ir_ref root, ir_ref ref_and_op, int8_t reg)
 {
 	char key[10];
@@ -1704,6 +1719,7 @@ int ir_reg_alloc_simple(ir_ctx *ctx)
 	ir_regset scratch;
 	ir_reg_alloc_simple_data x;
 	int32_t offset;
+	uint32_t same_reg_ops;
 
 	memset(&data, 0, sizeof(data));
 	data.cc = ir_get_call_conv_dsc(ctx->flags);
@@ -1877,6 +1893,7 @@ int ir_reg_alloc_simple(ir_ctx *ctx)
 
 				n = insn->inputs_count;
 				insn_flags = ir_op_flags[insn->op];
+				same_reg_ops = 0;
 				j = 1;
 				p = insn->ops + 1;
 				if (insn_flags & (IR_OP_FLAG_CONTROL|IR_OP_FLAG_MEM|IR_OP_FLAG_PINNED)) {
@@ -1914,8 +1931,19 @@ int ir_reg_alloc_simple(ir_ctx *ctx)
 								}
 							}
 							if (use_flags & IR_USE_MUST_BE_IN_REG) {
-								_add_reg(&x, ctx->ir_base[input].type, IR_LOAD_SUB_REF, use_pos, reg, IR_REG_SPILL_LOAD,
-									IR_UNUSED, i, j);
+								/* Emitters expect the same register for repeated inputs (e.g. MUL(a, a)) */
+								int32_t k = (reg == IR_REG_NONE && j <= 3) ?
+									ir_find_same_input_reg(&x, insn, i, j) : -1;
+
+								if (k >= 0) {
+									if (x.regs[k].end < use_pos) {
+										x.regs[k].end = use_pos;
+									}
+									same_reg_ops |= (uint32_t)x.regs[k].op << (j * 4);
+								} else {
+									_add_reg(&x, ctx->ir_base[input].type, IR_LOAD_SUB_REF, use_pos, reg, IR_REG_SPILL_LOAD,
+										IR_UNUSED, i, j);
+								}
 							}
 						} else {
 							if ((ctx->rules[input] & (IR_FUSED|IR_SKIPPED)) == IR_FUSED) {
@@ -1983,6 +2011,14 @@ int ir_reg_alloc_simple(ir_ctx *ctx)
 					} else if (ctx->regs[x.regs[j].ref][x.regs[j].op] != reg) {
 						ctx->rules[x.regs[j].ref] |= IR_FUSED_REG;
 						ir_set_fused_reg(ctx, x.regs[j].root, x.regs[j].ref * sizeof(ir_ref) + x.regs[j].op, reg);
+					}
+				}
+				for (j = 2; same_reg_ops; j++) {
+					uint32_t op = (same_reg_ops >> (j * 4)) & 0xf;
+
+					if (op) {
+						ctx->regs[i][j] = ctx->regs[i][op];
+						same_reg_ops &= ~(0xfu << (j * 4));
 					}
 				}
 			}
