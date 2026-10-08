@@ -1,0 +1,51 @@
+--TEST--
+DESSA: unused PHIs sharing a register with other PHIs
+--ARGS--
+-O1 --run
+--CODE--
+extern func @printf(uintptr_t, ...): int32_t;
+func @test(int16_t, int32_t, int64_t, int32_t): int64_t;
+func @test(int16_t, int32_t, int64_t, int32_t): int64_t
+{
+	int32_t c19 = 7;
+	uint32_t c29 = 0;
+	uint32_t c30 = 3;
+	uint32_t c52 = 5;
+	int32_t c_zero = 0;
+	l_start = START(l_ret);
+	int16_t p0 = PARAM(l_start, "p0", 1);
+	int32_t p1 = PARAM(l_start, "p1", 2);
+	int64_t p2 = PARAM(l_start, "p2", 3);
+	int32_t p3 = PARAM(l_start, "p3", 4);
+	l_e0 = END(l_start);
+	l_loop = LOOP_BEGIN(l_e0, l_le);
+	int32_t phi0 = PHI(l_loop, p3, p1);
+	int16_t phi2 = PHI(l_loop, p0, phi2);
+	int32_t i = PHI(l_loop, c_zero, i);
+	bool v20 = EQ(phi0, c19);
+	uint32_t m31 = PHI(l_loop, c29, c30);
+	bool v53 = UGT(m31, c52);
+	l_lif = IF(l_loop, i);
+	l_lt = IF_TRUE(l_lif);
+	l_le = LOOP_END(l_lt);
+	l_lf = IF_FALSE(l_lif);
+	int64_t r = SEXT(phi2);
+	l_ret = RETURN(l_lf, r);
+}
+func @main(): int32_t
+{
+	uintptr_t ft = func @test(int16_t, int32_t, int64_t, int32_t): int64_t;
+	uintptr_t fp = func @printf(uintptr_t, ...): int32_t;
+	uintptr_t fmt = "%lld\n";
+	int16_t a = 11;
+	int32_t b = 2;
+	int64_t c = 3;
+	int32_t d = 4;
+	int32_t z = 0;
+	l_1 = START(l_4);
+	int64_t r, l_2 = CALL/4(l_1, ft, a, b, c, d);
+	l_3 = CALL/2(l_2, fp, fmt, r);
+	l_4 = RETURN(l_3, z);
+}
+--EXPECT--
+11

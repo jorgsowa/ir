@@ -964,7 +964,8 @@ static void ir_emit_dessa_moves(ir_ctx *ctx, int b, ir_block *bb)
 		ir_ref ref = *p;
 		ir_insn *insn = &ctx->ir_base[ref];
 
-		if (insn->op == IR_PHI) {
+		/* unused PHIs may share their location with other values */
+		if (insn->op == IR_PHI && ctx->use_lists[ref].count) {
 			ir_ref input = ir_insn_op(insn, k);
 			ir_reg src = ir_get_alocated_reg(ctx, ref, k);
 			ir_reg dst = ctx->regs[ref][0];
