@@ -2969,6 +2969,27 @@ static void ir_emit_binop_int(ir_ctx *ctx, ir_ref def, ir_insn *insn)
 	}
 }
 
+static void ir_emit_fix_type(ir_ctx *ctx, ir_type type, ir_reg op1_reg)
+{
+	ir_backend_data *data = ctx->data;
+	dasm_State **Dst = &data->dasm_state;
+
+	// TODO: prevent repeatable sign/zero extension ???
+	if (ir_type_size[type] == 2) {
+		if (IR_IS_TYPE_SIGNED(type)) {
+			|	sxth Rw(op1_reg), Rw(op1_reg)
+		} else {
+			|	uxth Rw(op1_reg), Rw(op1_reg)
+		}
+	} else if (ir_type_size[type] == 1) {
+		if (IR_IS_TYPE_SIGNED(type)) {
+			|	sxtb Rw(op1_reg), Rw(op1_reg)
+		} else {
+			|	uxtb Rw(op1_reg), Rw(op1_reg)
+		}
+	}
+}
+
 static void ir_emit_min_max_int(ir_ctx *ctx, ir_ref def, ir_insn *insn)
 {
 	ir_backend_data *data = ctx->data;
@@ -3017,7 +3038,25 @@ static void ir_emit_min_max_int(ir_ctx *ctx, ir_ref def, ir_insn *insn)
 			}
 		}
 	} else {
-		|	cmp Rw(op1_reg), Rw(op2_reg)
+		if (ir_type_size[type] == 4) {
+			|	cmp Rw(op1_reg), Rw(op2_reg)
+		} else {
+			ir_emit_fix_type(ctx, type, op1_reg);
+			if (ir_type_size[type] == 2) {
+				if (IR_IS_TYPE_SIGNED(type)) {
+					|	cmp Rw(op1_reg), Rw(op2_reg), sxth
+				} else {
+					|	cmp Rw(op1_reg), Rw(op2_reg), uxth
+				}
+			} else {
+				IR_ASSERT(ir_type_size[type] == 1);
+				if (IR_IS_TYPE_SIGNED(type)) {
+					|	cmp Rw(op1_reg), Rw(op2_reg), sxtb
+				} else {
+					|	cmp Rw(op1_reg), Rw(op2_reg), uxtb
+				}
+			}
+		}
 		if (insn->op == IR_MIN) {
 			if (IR_IS_TYPE_SIGNED(type)) {
 				|	csel Rw(def_reg), Rw(op1_reg), Rw(op2_reg), le
@@ -3719,27 +3758,6 @@ static void ir_emit_binop_fp(ir_ctx *ctx, ir_ref def, ir_insn *insn)
 	}
 	if (IR_REG_SPILLED(ctx->regs[def][0])) {
 		ir_emit_store(ctx, insn->type, def, def_reg);
-	}
-}
-
-static void ir_emit_fix_type(ir_ctx *ctx, ir_type type, ir_reg op1_reg)
-{
-	ir_backend_data *data = ctx->data;
-	dasm_State **Dst = &data->dasm_state;
-
-	// TODO: prevent repeatable sign/zero extension ???
-	if (ir_type_size[type] == 2) {
-		if (IR_IS_TYPE_SIGNED(type)) {
-			|	sxth Rw(op1_reg), Rw(op1_reg)
-		} else {
-			|	uxth Rw(op1_reg), Rw(op1_reg)
-		}
-	} else if (ir_type_size[type] == 1) {
-		if (IR_IS_TYPE_SIGNED(type)) {
-			|	sxtb Rw(op1_reg), Rw(op1_reg)
-		} else {
-			|	uxtb Rw(op1_reg), Rw(op1_reg)
-		}
 	}
 }
 
