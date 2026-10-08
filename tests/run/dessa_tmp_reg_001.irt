@@ -1,0 +1,70 @@
+--TEST--
+DESSA: temporary register must not be one of PHI destinations
+--ARGS--
+-O1 --run
+--CODE--
+extern func @printf(uintptr_t, ...): int32_t;
+extern func @abs(int32_t): int32_t;
+func @main(): int32_t
+{
+	uintptr_t c_p = func @printf(uintptr_t, ...): int32_t;
+	uintptr_t c_f = "%d %d %d %lld %lld %lld %d %d %d %d %d %d %d\n";
+	uintptr_t c_abs = func @abs(int32_t): int32_t;
+	int32_t c_0 = 0;
+	int32_t c_1 = 1;
+	int32_t c_it = 2;
+	int32_t k_0 = 14;
+	int32_t k_1 = 3;
+	int32_t k_2 = 15;
+	uint16_t k_3 = 33;
+	uint16_t k_4 = 3;
+	int64_t k_5 = 2;
+	int64_t k_6 = 3;
+	int64_t k_7 = 36;
+	int64_t k_8 = 13;
+	int32_t k_9 = 42;
+	uint16_t k_10 = 45;
+	uint16_t k_11 = 35;
+	int8_t k_12 = 27;
+	int8_t k_13 = 3;
+	int8_t k_14 = 29;
+	int32_t k_15 = 1;
+	int64_t k_16 = 23;
+	int32_t k_17 = 19;
+	int8_t k_18 = 15;
+	l_1 = START(l_ret);
+	l_2 = END(l_1);
+	l_3 = LOOP_BEGIN(l_2, l_le);
+	int32_t p0 = PHI(l_3, k_0, p12);
+	int32_t p1 = PHI(l_3, k_2, p6);
+	uint16_t p2 = PHI(l_3, k_3, q7);
+	int64_t p3 = PHI(l_3, k_5, k_16);
+	int64_t p4 = PHI(l_3, k_7, p3);
+	int64_t p5 = PHI(l_3, k_8, p5);
+	int32_t p6 = PHI(l_3, k_9, k_17);
+	uint16_t p7 = PHI(l_3, k_10, p7);
+	uint16_t p8 = PHI(l_3, k_11, p2);
+	int8_t p9 = PHI(l_3, k_12, k_18);
+	int32_t p10 = PHI(l_3, k_2, p0);
+	int8_t p11 = PHI(l_3, k_14, p9);
+	int32_t p12 = PHI(l_3, k_15, q6);
+	int32_t i = PHI(l_3, c_0, i1);
+	int32_t i1 = ADD(i, c_1);
+	int32_t q6 = ADD(p6, k_1);
+	uint16_t q7 = ADD(p7, k_4);
+	bool cond = LT(i1, c_it);
+	l_4 = IF(l_3, cond);
+	l_5 = IF_TRUE(l_4);
+	int32_t zz, l_5b = CALL/1(l_5, c_abs, c_0);
+	l_le = LOOP_END(l_5b);
+	l_6 = IF_FALSE(l_4);
+	int32_t e2 = ZEXT(p2);
+	int32_t e7 = ZEXT(p7);
+	int32_t e8 = ZEXT(p8);
+	int32_t e9 = SEXT(p9);
+	int32_t e11 = SEXT(p11);
+	int32_t r, l_7 = CALL/14(l_6, c_p, c_f, p0, p1, e2, p3, p4, p5, p6, e7, e8, e9, p10, e11, p12);
+	l_ret = RETURN(l_7, c_0);
+}
+--EXPECT--
+1 42 48 23 2 13 19 45 33 15 14 27 45

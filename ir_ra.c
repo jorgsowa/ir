@@ -4368,6 +4368,108 @@ static void ir_set_fused_reg(ir_ctx *ctx, ir_ref root, ir_ref ref_and_op, int8_t
 	ir_strtab_lookup(ctx->fused_regs, key, 8, 0x10000000 | (uint8_t)reg);
 }
 
+static ir_reg ir_ival_reg_at(ir_live_interval *ival, ir_live_pos pos)
+{
+	ir_live_range *r;
+
+	for (; ival; ival = ival->next) {
+		for (r = &ival->range; r; r = r->next) {
+			if (pos >= r->start && pos < r->end) {
+				return ival->reg;
+			}
+		}
+	}
+	return IR_REG_NONE;
+}
+
+static void ir_exclude_overlapped_regs(ir_regset *available, ir_live_interval *ival, ir_live_interval *tmp)
+{
+	for (; ival; ival = ival->next) {
+		if (ival != tmp && ival->reg != IR_REG_NONE && ir_ivals_overlap(&ival->range, &tmp->range)) {
+			if (ival->reg >= IR_REG_NUM) {
+				*available = IR_REGSET_DIFFERENCE(*available, ir_scratch_regset[ival->reg - IR_REG_NUM]);
+			} else {
+				IR_REGSET_EXCL(*available, ival->reg);
+			}
+#if IR_X86_I64
+			if (ival->flags & IR_LIVE_INTERVAL_TWO_REGS) {
+				IR_REGSET_EXCL(*available, ival->reg_hi);
+			}
+#endif
+		}
+	}
+}
+
+/* DESSA moves may need the temporary register after writing a PHI destination,
+ * so the temporary must differ from all PHI destinations of the successor */
+static void ir_fix_dessa_tmp_regs(ir_ctx *ctx)
+{
+	ir_live_interval *tmp;
+	ir_regset available, phi_regs;
+	ir_block *bb, *succ_bb;
+	ir_use_list *use_list;
+	ir_ref *p, n;
+	ir_live_pos pos;
+	ir_reg reg;
+	int j, k;
+	bool need_tmp;
+
+	for (tmp = ctx->live_intervals[0]; tmp; tmp = tmp->next) {
+		ir_insn *insn = &ctx->ir_base[tmp->tmp_ref];
+
+		if ((insn->op != IR_END && insn->op != IR_LOOP_END) || tmp->reg == IR_REG_NONE) {
+			continue;
+		}
+		bb = &ctx->cfg_blocks[ctx->cfg_map[tmp->tmp_ref]];
+		IR_ASSERT(bb->end == tmp->tmp_ref && bb->successors_count == 1);
+		succ_bb = &ctx->cfg_blocks[ctx->cfg_edges[bb->successors]];
+		pos = IR_START_LIVE_POS_FROM_REF(succ_bb->start);
+		k = ir_phi_input_number(ctx, succ_bb, ctx->cfg_map[tmp->tmp_ref]);
+		phi_regs = IR_REGSET_EMPTY;
+		need_tmp = 0;
+		use_list = &ctx->use_lists[succ_bb->start];
+		for (n = use_list->count, p = &ctx->use_edges[use_list->refs]; n > 0; p++, n--) {
+			ir_insn *phi = &ctx->ir_base[*p];
+
+			if (phi->op == IR_PHI && ctx->vregs[*p] > 0) {
+				reg = ir_ival_reg_at(ctx->live_intervals[ctx->vregs[*p]], pos);
+				if (reg >= 0 && reg < IR_REG_NUM) {
+					IR_REGSET_INCL(phi_regs, reg);
+				} else if (IR_IS_TYPE_INT(phi->type) == IR_IS_TYPE_INT(tmp->type)) {
+					/* a move into a spill slot from a constant or another spill slot needs the temporary */
+					ir_ref input = ir_insn_op(phi, k);
+
+					if (input <= 0
+					 || ctx->vregs[input] <= 0
+					 || ir_ival_reg_at(ctx->live_intervals[ctx->vregs[input]], tmp->range.start) == IR_REG_NONE) {
+						need_tmp = 1;
+					}
+				}
+			}
+		}
+		if (!need_tmp || !IR_REGSET_IN(phi_regs, tmp->reg)) {
+			continue;
+		}
+
+		available = (IR_IS_TYPE_FP(tmp->type) || IR_IS_TYPE_VECTOR(tmp->type)) ? IR_REGSET_FP : IR_REGSET_GP;
+		if (ctx->flags & IR_USE_FRAME_POINTER) {
+			IR_REGSET_EXCL(available, IR_REG_FRAME_POINTER);
+		}
+		available = IR_REGSET_DIFFERENCE(available, (ir_regset)ctx->fixed_regset);
+		available = IR_REGSET_DIFFERENCE(available, phi_regs);
+		for (j = 1; j <= ctx->vregs_count + IR_REG_SET_NUM; j++) {
+			ir_exclude_overlapped_regs(&available, ctx->live_intervals[j], tmp);
+		}
+		ir_exclude_overlapped_regs(&available, ctx->live_intervals[0], tmp);
+		if (available != IR_REGSET_EMPTY) {
+			ir_regset scratch = IR_REGSET_DIFFERENCE(available,
+				((ir_reg_alloc_data*)(ctx->data))->cc->preserved_regs);
+
+			tmp->reg = IR_REGSET_FIRST(scratch != IR_REGSET_EMPTY ? scratch : available);
+		}
+	}
+}
+
 static void assign_regs(ir_ctx *ctx)
 {
 	ir_ref i;
@@ -4645,6 +4747,9 @@ int ir_reg_alloc(ir_ctx *ctx)
 	ctx->stack_frame_size = 0;
 
 	if (ir_linear_scan(ctx, vars)) {
+		if (ctx->flags2 & IR_LR_HAVE_DESSA_MOVES) {
+			ir_fix_dessa_tmp_regs(ctx);
+		}
 		assign_regs(ctx);
 		ctx->data = NULL;
 		return 1;
