@@ -2817,6 +2817,8 @@ static void ir_emit_epilogue(ir_ctx *ctx)
 	}
 }
 
+static void ir_emit_fix_type(ir_ctx *ctx, ir_type type, ir_reg op1_reg);
+
 static void ir_emit_binop_int(ir_ctx *ctx, ir_ref def, ir_insn *insn)
 {
 	ir_backend_data *data = ctx->data;
@@ -3246,20 +3248,25 @@ static void ir_emit_sdiv_pwr2(ir_ctx *ctx, ir_ref def, ir_insn *insn)
 		|	csel Rx(def_reg), Rx(def_reg), Rx(op1_reg), lt
 		|	asr Rx(def_reg), Rx(def_reg), #shift
 	} else {
-		|	cmp Rw(op1_reg), #0
+		uint32_t bits = ir_type_size[type] * 8;
+
+		if (bits == 32) {
+			|	cmp Rw(op1_reg), #0
+		} else {
+			uint32_t sign_bit = 1U << (bits - 1);
+			|	tst Rw(op1_reg), #sign_bit
+		}
 		if (op2_reg != IR_REG_NONE) {
 			|	add Rw(def_reg), Rw(op1_reg), Rw(op2_reg)
 		} else {
 			|	add Rw(def_reg), Rw(op1_reg), #offset
 		}
-		|	csel Rw(def_reg), Rw(def_reg), Rw(op1_reg), lt
-		if (ir_type_size[type] == 4) {
+		if (bits == 32) {
+			|	csel Rw(def_reg), Rw(def_reg), Rw(op1_reg), lt
 			|	asr Rw(def_reg), Rw(def_reg), #shift
-		} else if (ir_type_size[type] == 2) {
-			|	ubfx Rw(def_reg), Rw(def_reg), #shift, #16
 		} else {
-			IR_ASSERT(ir_type_size[type] == 1);
-			|	ubfx Rw(def_reg), Rw(def_reg), #shift, #8
+			|	csel Rw(def_reg), Rw(def_reg), Rw(op1_reg), ne
+			|	sbfx Rw(def_reg), Rw(def_reg), #shift, #(bits-shift)
 		}
 	}
 	if (IR_REG_SPILLED(ctx->regs[def][0])) {
@@ -3294,6 +3301,9 @@ static void ir_emit_smod_pwr2(ir_ctx *ctx, ir_ref def, ir_insn *insn)
 		} else {
 			ir_emit_load(ctx, type, def_reg, op1);
 		}
+	}
+	if (ir_type_size[type] < 4) {
+		ir_emit_fix_type(ctx, type, def_reg);
 	}
 
 //	|	ASM_REG_REG_IMM_OP asr, type, tmp_reg, def_reg, (ir_type_size[type]*8-1)
