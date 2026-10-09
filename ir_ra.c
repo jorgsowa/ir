@@ -4495,7 +4495,10 @@ static void assign_regs(ir_ctx *ctx)
 										prev_use_ref = ref;
 									}
 								} else {
-									if ((!prev_use_ref || ctx->cfg_map[prev_use_ref] != ctx->cfg_map[ref])
+									if ((!prev_use_ref || ctx->cfg_map[prev_use_ref] != ctx->cfg_map[ref]
+									  /* CALL arguments may be loaded directly from the spill slot, bypassing the register */
+									  || (prev_use_ref == ref
+									   && (ctx->ir_base[ref].op == IR_CALL || ctx->ir_base[ref].op == IR_TAILCALL)))
 									 && needs_spill_reload(ctx, ival, ctx->cfg_map[ref], available)) {
 										if (!(use_pos->flags & IR_USE_MUST_BE_IN_REG)
 //										 && ctx->ir_base[ref].op != IR_CALL

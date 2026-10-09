@@ -1,0 +1,82 @@
+--TEST--
+CALL passing the same spilled value in a register and on stack
+--ARGS--
+-O1 --run
+--CODE--
+extern func @printf(uintptr_t, ...): int32_t;
+func @test(int64_t, int64_t): int64_t;
+func @callee(int64_t, int32_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t): int64_t;
+func @callee(int64_t, int32_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t): int64_t
+{
+	l_1 = START(l_r);
+	int64_t a0 = PARAM(l_1, "a0", 1);
+	int32_t a1 = PARAM(l_1, "a1", 2);
+	int64_t a2 = PARAM(l_1, "a2", 3);
+	int64_t a3 = PARAM(l_1, "a3", 4);
+	int64_t a4 = PARAM(l_1, "a4", 5);
+	int64_t a5 = PARAM(l_1, "a5", 6);
+	int64_t a6 = PARAM(l_1, "a6", 7);
+	int64_t a7 = PARAM(l_1, "a7", 8);
+	int64_t a8 = PARAM(l_1, "a8", 9);
+	int64_t a9 = PARAM(l_1, "a9", 10);
+	int64_t s1 = ADD(a0, a8);
+	int64_t s2 = ADD(s1, a9);
+	l_r = RETURN(l_1, s2);
+}
+func @test(int64_t, int64_t): int64_t
+{
+	int32_t c2 = 0;
+	uint8_t c5 = 0;
+	uint8_t c6 = 207;
+	uint8_t c18 = 255;
+	uintptr_t fg = func @callee(int64_t, int32_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t): int64_t;
+	int32_t c_zero = 0;
+	int32_t c_one = 1;
+	int32_t c_iters = 5;
+	l_start = START(l_ret);
+	int64_t p0 = PARAM(l_start, "p0", 1);
+	int64_t p1 = PARAM(l_start, "p1", 2);
+	int64_t v4 = OR(p1, p0);
+	l_e0 = END(l_start);
+	l_loop = LOOP_BEGIN(l_e0, l_le);
+	int64_t phi0 = PHI(l_loop, v4, m16);
+	int64_t phi1 = PHI(l_loop, p1, v17);
+	uint8_t phi2 = PHI(l_loop, c5, phi5);
+	uint8_t phi3 = PHI(l_loop, c5, phi3);
+	int32_t phi4 = PHI(l_loop, c2, phi4);
+	uint8_t phi5 = PHI(l_loop, c6, c18);
+	int32_t i = PHI(l_loop, c_zero, i_next);
+	l_if1 = IF(l_loop, phi4);
+	l_t1 = IF_TRUE(l_if1);
+	l_te1 = END(l_t1);
+	l_f1 = IF_FALSE(l_if1);
+	l_fe1 = END(l_f1);
+	l_mg1 = MERGE(l_te1, l_fe1);
+	int64_t m16 = PHI(l_mg1, p1, v4);
+	int64_t v17, v17_l = CALL/10(l_mg1, fg, m16, c2, v4, phi0, phi1, p1, phi0, p0, m16, m16);
+	int32_t i_next = ADD(i, c_one);
+	bool lc = LT(i_next, c_iters);
+	l_lif = IF(v17_l, lc);
+	l_lt = IF_TRUE(l_lif);
+	l_le = LOOP_END(l_lt);
+	l_lf = IF_FALSE(l_lif);
+	int64_t aa_phi1 = ADD(phi0, phi1);
+	int64_t x_phi2 = ZEXT(phi2);
+	int64_t aa_phi2 = ADD(aa_phi1, x_phi2);
+	l_ret = RETURN(l_lf, aa_phi2);
+}
+func @main(): int32_t
+{
+	int32_t z = 0;
+	uintptr_t ft = func @test(int64_t, int64_t): int64_t;
+	uintptr_t fp = func @printf(uintptr_t, ...): int32_t;
+	uintptr_t fmt = "%lld\n";
+	int64_t a = -1739289377059056203;
+	int64_t b = -8938297535129975286;
+	l_1 = START(l_4);
+	int64_t r, l_2 = CALL/2(l_1, ft, a, b);
+	l_3 = CALL/2(l_2, fp, fmt, r);
+	l_4 = RETURN(l_3, z);
+}
+--EXPECT--
+-6921127729208008709
