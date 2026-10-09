@@ -1439,6 +1439,7 @@ typedef struct {
 		int8_t  end;
 		int8_t  hint;
 		int8_t  flags;
+		int8_t  same;   /* index of an entry for the same input, or -1 */
 		ir_ref  root;
 		ir_ref  ref;
 		ir_ref  op;
@@ -1472,6 +1473,7 @@ static void _add_reg(ir_reg_alloc_simple_data *x, ir_type type,
 	x->regs[x->num].end = end;
 	x->regs[x->num].hint = hint;
 	x->regs[x->num].flags = flags;
+	x->regs[x->num].same = -1;
 	x->regs[x->num].root = root;
 	x->regs[x->num].ref = ref;
 	x->regs[x->num].op = op;
@@ -1535,19 +1537,30 @@ static ir_reg _get_free_reg2(ir_ctx *ctx, ir_type type, ir_reg_alloc_simple_data
 	return reg;
 }
 
-static int32_t ir_find_same_input_reg(ir_reg_alloc_simple_data *x, ir_insn *insn, ir_ref ref, ir_ref op)
+/* Emitters expect the same register for repeated inputs of an instruction (e.g. MUL(a, a)) */
+static void _add_input_reg(ir_ctx *ctx, ir_reg_alloc_simple_data *x, ir_type type,
+                           int8_t start, int8_t end, ir_reg hint, ir_ref root, ir_ref ref, ir_ref op)
 {
 	int32_t k;
 
-	for (k = 0; k < x->num; k++) {
-		if (x->regs[k].ref == ref && !x->regs[k].root
-		 && x->regs[k].op > 0 && x->regs[k].op < op
-		 && x->regs[k].hint == IR_REG_NONE
-		 && insn->ops[x->regs[k].op] == insn->ops[op]) {
-			return k;
+	if (hint == IR_REG_NONE && op <= 3) {
+		ir_ref input = ctx->ir_base[ref].ops[op];
+
+		for (k = 0; k < x->num; k++) {
+			if (x->regs[k].ref == ref && x->regs[k].root == root
+			 && x->regs[k].op > 0 && x->regs[k].op < op
+			 && x->regs[k].hint == IR_REG_NONE && x->regs[k].same < 0
+			 && ctx->ir_base[ref].ops[x->regs[k].op] == input) {
+				if (x->regs[k].end < end) {
+					x->regs[k].end = end;
+				}
+				_add_reg(x, type, start, end, hint, IR_REG_SPILL_LOAD, root, ref, op);
+				x->regs[x->num - 1].same = k;
+				return;
+			}
 		}
 	}
-	return -1;
+	_add_reg(x, type, start, end, hint, IR_REG_SPILL_LOAD, root, ref, op);
 }
 
 static void ir_set_fused_reg(ir_ctx *ctx, ir_ref root, ir_ref ref_and_op, int8_t reg)
@@ -1670,7 +1683,7 @@ static void ir_add_fusion_data(ir_ctx *ctx, ir_ref ref, ir_ref input, ir_reg_all
 						ir_reg reg = (j < constraints.hints_count) ? constraints.hints[j] : IR_REG_NONE;
 						int8_t use_pos = EXPECTED(reg == IR_REG_NONE) ? IR_USE_SUB_REF : IR_LOAD_SUB_REF;
 
-						_add_reg(x, ctx->ir_base[child].type, IR_LOAD_SUB_REF, use_pos, reg, IR_REG_SPILL_LOAD,
+						_add_input_reg(ctx, x, ctx->ir_base[child].type, IR_LOAD_SUB_REF, use_pos, reg,
 							ref, input, j);
 					}
 				} else if (ctx->rules[child] & IR_FUSED) {
@@ -1719,7 +1732,6 @@ int ir_reg_alloc_simple(ir_ctx *ctx)
 	ir_regset scratch;
 	ir_reg_alloc_simple_data x;
 	int32_t offset;
-	uint32_t same_reg_ops;
 
 	memset(&data, 0, sizeof(data));
 	data.cc = ir_get_call_conv_dsc(ctx->flags);
@@ -1893,7 +1905,6 @@ int ir_reg_alloc_simple(ir_ctx *ctx)
 
 				n = insn->inputs_count;
 				insn_flags = ir_op_flags[insn->op];
-				same_reg_ops = 0;
 				j = 1;
 				p = insn->ops + 1;
 				if (insn_flags & (IR_OP_FLAG_CONTROL|IR_OP_FLAG_MEM|IR_OP_FLAG_PINNED)) {
@@ -1931,19 +1942,8 @@ int ir_reg_alloc_simple(ir_ctx *ctx)
 								}
 							}
 							if (use_flags & IR_USE_MUST_BE_IN_REG) {
-								/* Emitters expect the same register for repeated inputs (e.g. MUL(a, a)) */
-								int32_t k = (reg == IR_REG_NONE && j <= 3) ?
-									ir_find_same_input_reg(&x, insn, i, j) : -1;
-
-								if (k >= 0) {
-									if (x.regs[k].end < use_pos) {
-										x.regs[k].end = use_pos;
-									}
-									same_reg_ops |= (uint32_t)x.regs[k].op << (j * 4);
-								} else {
-									_add_reg(&x, ctx->ir_base[input].type, IR_LOAD_SUB_REF, use_pos, reg, IR_REG_SPILL_LOAD,
-										IR_UNUSED, i, j);
-								}
+								_add_input_reg(ctx, &x, ctx->ir_base[input].type, IR_LOAD_SUB_REF, use_pos, reg,
+									IR_UNUSED, i, j);
 							}
 						} else {
 							if ((ctx->rules[input] & (IR_FUSED|IR_SKIPPED)) == IR_FUSED) {
@@ -1961,6 +1961,10 @@ int ir_reg_alloc_simple(ir_ctx *ctx)
 					ir_reg reg2;
 #endif
 
+					if (x.regs[j].same >= 0) {
+						reg = x.regs[x.regs[j].same].hint;
+						goto assign_reg;
+					}
 					for (n = x.regs[j].start; n < x.regs[j].end; n++) {
 						available = IR_REGSET_DIFFERENCE(available, x.clobbered[n]);
 					}
@@ -1999,6 +2003,9 @@ int ir_reg_alloc_simple(ir_ctx *ctx)
 						reg = IR_REG_I64_PAIR(reg, reg2);
 					}
 #endif
+					/* keep the selected register for entries of the same input */
+					x.regs[j].hint = reg;
+assign_reg:
 					reg = reg | x.regs[j].flags;
 					if (x.regs[j].op == 4 && insn->inputs_count < 4) {
 						if (!ctx->tmp_regs) {
@@ -2011,14 +2018,6 @@ int ir_reg_alloc_simple(ir_ctx *ctx)
 					} else if (ctx->regs[x.regs[j].ref][x.regs[j].op] != reg) {
 						ctx->rules[x.regs[j].ref] |= IR_FUSED_REG;
 						ir_set_fused_reg(ctx, x.regs[j].root, x.regs[j].ref * sizeof(ir_ref) + x.regs[j].op, reg);
-					}
-				}
-				for (j = 2; same_reg_ops; j++) {
-					uint32_t op = (same_reg_ops >> (j * 4)) & 0xf;
-
-					if (op) {
-						ctx->regs[i][j] = ctx->regs[i][op];
-						same_reg_ops &= ~(0xfu << (j * 4));
 					}
 				}
 			}
