@@ -3524,6 +3524,8 @@ done:
 	}
 }
 
+static void ir_emit_fix_type(ir_ctx *ctx, ir_type type, ir_reg op1_reg);
+
 static void ir_emit_op_int(ir_ctx *ctx, ir_ref def, ir_insn *insn)
 {
 	ir_backend_data *data = ctx->data;
@@ -3553,6 +3555,9 @@ static void ir_emit_op_int(ir_ctx *ctx, ir_ref def, ir_insn *insn)
 			|	cmp Rx(op1_reg), #0
 			|	cneg Rx(def_reg), Rx(op1_reg), lt
 		} else {
+			if (ir_type_size[src_type] < 4) {
+				ir_emit_fix_type(ctx, src_type, op1_reg);
+			}
 			|	cmp Rw(op1_reg), #0
 			|	cneg Rw(def_reg), Rw(op1_reg), lt
 		}
