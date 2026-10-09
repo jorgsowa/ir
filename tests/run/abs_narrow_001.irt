@@ -1,0 +1,45 @@
+--TEST--
+ABS of 8-bit and 16-bit values with not normalized upper bits
+--ARGS--
+-O1 --run
+--CODE--
+extern func @printf(uintptr_t, ...): int32_t;
+func @abs8(int8_t): int8_t;
+func @abs8(int8_t): int8_t
+{
+	int8_t c_1 = 1;
+	l_1 = START(l_2);
+	int8_t x = PARAM(l_1, "x", 1);
+	int8_t s = SHL(x, c_1);
+	int8_t r = ABS(s);
+	l_2 = RETURN(l_1, r);
+}
+func @abs16(int16_t): int16_t;
+func @abs16(int16_t): int16_t
+{
+	int16_t c_1 = 1;
+	l_1 = START(l_2);
+	int16_t x = PARAM(l_1, "x", 1);
+	int16_t s = SHL(x, c_1);
+	int16_t r = ABS(s);
+	l_2 = RETURN(l_1, r);
+}
+func @main(): int32_t
+{
+	uintptr_t f8 = func @abs8(int8_t): int8_t;
+	uintptr_t f16 = func @abs16(int16_t): int16_t;
+	uintptr_t fp = func @printf(uintptr_t, ...): int32_t;
+	uintptr_t fmt = "%d %d\n";
+	int8_t a = 100;
+	int16_t b = 20000;
+	int32_t z = 0;
+	l_1 = START(l_5);
+	int8_t r1, l_2 = CALL/1(l_1, f8, a);
+	int16_t r2, l_3 = CALL/1(l_2, f16, b);
+	int32_t e1 = SEXT(r1);
+	int32_t e2 = SEXT(r2);
+	l_4 = CALL/3(l_3, fp, fmt, e1, e2);
+	l_5 = RETURN(l_4, z);
+}
+--EXPECT--
+56 25536
