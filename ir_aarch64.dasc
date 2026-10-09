@@ -567,6 +567,11 @@ int ir_get_target_constraints(ir_ctx *ctx, ir_ref ref, ir_target_constraints *co
 			} else if (rule == IR_SHIFT && insn->op == IR_ROL) {
 				constraints->tmp_regs[n] = IR_TMP_REG(3, insn->type, IR_LOAD_SUB_REF, IR_DEF_SUB_REF);
 				n++;
+			} else if (rule == IR_SHIFT
+			 && (insn->op == IR_SHL || insn->op == IR_SHR || insn->op == IR_SAR)
+			 && ir_type_size[insn->type] < 4) {
+				/* the extended operand is written into "def_reg" before the shift amount is used */
+				flags |= IR_DEF_CONFLICTS_WITH_INPUT_REGS;
 			}
 			break;
 		case IR_SDIV_PWR2:
