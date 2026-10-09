@@ -2817,6 +2817,8 @@ static void ir_emit_epilogue(ir_ctx *ctx)
 	}
 }
 
+static void ir_emit_fix_type(ir_ctx *ctx, ir_type type, ir_reg op1_reg);
+
 static void ir_emit_binop_int(ir_ctx *ctx, ir_ref def, ir_insn *insn)
 {
 	ir_backend_data *data = ctx->data;
@@ -3335,37 +3337,19 @@ static void ir_emit_shift(ir_ctx *ctx, ir_ref def, ir_insn *insn)
 		default:
 			IR_ASSERT(0);
 		case IR_SHL:
-			if (ir_type_size[type] == 1) {
-				|	and Rw(def_reg), Rw(op1_reg), #0xff
-				|	lsl Rw(def_reg), Rw(def_reg), Rw(op2_reg)
-			} else if (ir_type_size[type] == 2) {
-				|	and Rw(def_reg), Rw(op1_reg), #0xffff
-				|	lsl Rw(def_reg), Rw(def_reg), Rw(op2_reg)
-			} else {
-				|	ASM_REG_REG_REG_OP lsl, type, def_reg, op1_reg, op2_reg
-			}
+			|	ASM_REG_REG_REG_OP lsl, type, def_reg, op1_reg, op2_reg
 			break;
 		case IR_SHR:
-			if (ir_type_size[type] == 1) {
-				|	and Rw(def_reg), Rw(op1_reg), #0xff
-				|	lsr Rw(def_reg), Rw(def_reg), Rw(op2_reg)
-			} else if (ir_type_size[type] == 2) {
-				|	and Rw(def_reg), Rw(op1_reg), #0xffff
-				|	lsr Rw(def_reg), Rw(def_reg), Rw(op2_reg)
-			} else {
-				|	ASM_REG_REG_REG_OP lsr, type, def_reg, op1_reg, op2_reg
+			if (ir_type_size[type] < 4) {
+				ir_emit_fix_type(ctx, ir_type_size[type] == 1 ? IR_U8 : IR_U16, op1_reg);
 			}
+			|	ASM_REG_REG_REG_OP lsr, type, def_reg, op1_reg, op2_reg
 			break;
 		case IR_SAR:
-			if (ir_type_size[type] == 1) {
-				|	sxtb Rw(def_reg), Rw(op1_reg)
-				|	asr Rw(def_reg), Rw(def_reg), Rw(op2_reg)
-			} else if (ir_type_size[type] == 2) {
-				|	sxth Rw(def_reg), Rw(op1_reg)
-				|	asr Rw(def_reg), Rw(def_reg), Rw(op2_reg)
-			} else {
-				|	ASM_REG_REG_REG_OP asr, type, def_reg, op1_reg, op2_reg
+			if (ir_type_size[type] < 4) {
+				ir_emit_fix_type(ctx, ir_type_size[type] == 1 ? IR_I8 : IR_I16, op1_reg);
 			}
+			|	ASM_REG_REG_REG_OP asr, type, def_reg, op1_reg, op2_reg
 			break;
 		case IR_ROL:
 			tmp_reg = ctx->regs[def][3];
