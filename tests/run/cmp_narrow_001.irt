@@ -1,0 +1,241 @@
+--TEST--
+Signed and unsigned comparisons of 8-bit and 16-bit values
+--ARGS--
+-O1 --run
+--CODE--
+extern func @printf(uintptr_t, ...): int32_t;
+func @cmp_u8(uint8_t, uint8_t): void;
+func @cmp_u8(uint8_t, uint8_t): void
+{
+	uint8_t cb = 100;
+	uintptr_t fp = func @printf(uintptr_t, ...): int32_t;
+	uintptr_t fmt = "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d\n";
+	l_1 = START(l_3);
+	uint8_t x = PARAM(l_1, "x", 1);
+	uint8_t y = PARAM(l_1, "y", 2);
+	bool r_EQ = EQ(x, y);
+	int32_t z_EQ = ZEXT(r_EQ);
+	bool k_EQ = EQ(x, cb);
+	int32_t q_EQ = ZEXT(k_EQ);
+	bool r_NE = NE(x, y);
+	int32_t z_NE = ZEXT(r_NE);
+	bool k_NE = NE(x, cb);
+	int32_t q_NE = ZEXT(k_NE);
+	bool r_LT = LT(x, y);
+	int32_t z_LT = ZEXT(r_LT);
+	bool k_LT = LT(x, cb);
+	int32_t q_LT = ZEXT(k_LT);
+	bool r_GE = GE(x, y);
+	int32_t z_GE = ZEXT(r_GE);
+	bool k_GE = GE(x, cb);
+	int32_t q_GE = ZEXT(k_GE);
+	bool r_LE = LE(x, y);
+	int32_t z_LE = ZEXT(r_LE);
+	bool k_LE = LE(x, cb);
+	int32_t q_LE = ZEXT(k_LE);
+	bool r_GT = GT(x, y);
+	int32_t z_GT = ZEXT(r_GT);
+	bool k_GT = GT(x, cb);
+	int32_t q_GT = ZEXT(k_GT);
+	bool r_ULT = ULT(x, y);
+	int32_t z_ULT = ZEXT(r_ULT);
+	bool k_ULT = ULT(x, cb);
+	int32_t q_ULT = ZEXT(k_ULT);
+	bool r_UGE = UGE(x, y);
+	int32_t z_UGE = ZEXT(r_UGE);
+	bool k_UGE = UGE(x, cb);
+	int32_t q_UGE = ZEXT(k_UGE);
+	bool r_ULE = ULE(x, y);
+	int32_t z_ULE = ZEXT(r_ULE);
+	bool k_ULE = ULE(x, cb);
+	int32_t q_ULE = ZEXT(k_ULE);
+	bool r_UGT = UGT(x, y);
+	int32_t z_UGT = ZEXT(r_UGT);
+	bool k_UGT = UGT(x, cb);
+	int32_t q_UGT = ZEXT(k_UGT);
+	l_2 = CALL/21(l_1, fp, fmt, z_EQ, q_EQ, z_NE, q_NE, z_LT, q_LT, z_GE, q_GE, z_LE, q_LE, z_GT, q_GT, z_ULT, q_ULT, z_UGE, q_UGE, z_ULE, q_ULE, z_UGT, q_UGT);
+	l_3 = RETURN(l_2);
+}
+func @cmp_i8(int8_t, int8_t): void;
+func @cmp_i8(int8_t, int8_t): void
+{
+	int8_t cb = 100;
+	uintptr_t fp = func @printf(uintptr_t, ...): int32_t;
+	uintptr_t fmt = "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d\n";
+	l_1 = START(l_3);
+	int8_t x = PARAM(l_1, "x", 1);
+	int8_t y = PARAM(l_1, "y", 2);
+	bool r_EQ = EQ(x, y);
+	int32_t z_EQ = ZEXT(r_EQ);
+	bool k_EQ = EQ(x, cb);
+	int32_t q_EQ = ZEXT(k_EQ);
+	bool r_NE = NE(x, y);
+	int32_t z_NE = ZEXT(r_NE);
+	bool k_NE = NE(x, cb);
+	int32_t q_NE = ZEXT(k_NE);
+	bool r_LT = LT(x, y);
+	int32_t z_LT = ZEXT(r_LT);
+	bool k_LT = LT(x, cb);
+	int32_t q_LT = ZEXT(k_LT);
+	bool r_GE = GE(x, y);
+	int32_t z_GE = ZEXT(r_GE);
+	bool k_GE = GE(x, cb);
+	int32_t q_GE = ZEXT(k_GE);
+	bool r_LE = LE(x, y);
+	int32_t z_LE = ZEXT(r_LE);
+	bool k_LE = LE(x, cb);
+	int32_t q_LE = ZEXT(k_LE);
+	bool r_GT = GT(x, y);
+	int32_t z_GT = ZEXT(r_GT);
+	bool k_GT = GT(x, cb);
+	int32_t q_GT = ZEXT(k_GT);
+	bool r_ULT = ULT(x, y);
+	int32_t z_ULT = ZEXT(r_ULT);
+	bool k_ULT = ULT(x, cb);
+	int32_t q_ULT = ZEXT(k_ULT);
+	bool r_UGE = UGE(x, y);
+	int32_t z_UGE = ZEXT(r_UGE);
+	bool k_UGE = UGE(x, cb);
+	int32_t q_UGE = ZEXT(k_UGE);
+	bool r_ULE = ULE(x, y);
+	int32_t z_ULE = ZEXT(r_ULE);
+	bool k_ULE = ULE(x, cb);
+	int32_t q_ULE = ZEXT(k_ULE);
+	bool r_UGT = UGT(x, y);
+	int32_t z_UGT = ZEXT(r_UGT);
+	bool k_UGT = UGT(x, cb);
+	int32_t q_UGT = ZEXT(k_UGT);
+	l_2 = CALL/21(l_1, fp, fmt, z_EQ, q_EQ, z_NE, q_NE, z_LT, q_LT, z_GE, q_GE, z_LE, q_LE, z_GT, q_GT, z_ULT, q_ULT, z_UGE, q_UGE, z_ULE, q_ULE, z_UGT, q_UGT);
+	l_3 = RETURN(l_2);
+}
+func @cmp_u16(uint16_t, uint16_t): void;
+func @cmp_u16(uint16_t, uint16_t): void
+{
+	uint16_t cb = 16;
+	uintptr_t fp = func @printf(uintptr_t, ...): int32_t;
+	uintptr_t fmt = "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d\n";
+	l_1 = START(l_3);
+	uint16_t x = PARAM(l_1, "x", 1);
+	uint16_t y = PARAM(l_1, "y", 2);
+	bool r_EQ = EQ(x, y);
+	int32_t z_EQ = ZEXT(r_EQ);
+	bool k_EQ = EQ(x, cb);
+	int32_t q_EQ = ZEXT(k_EQ);
+	bool r_NE = NE(x, y);
+	int32_t z_NE = ZEXT(r_NE);
+	bool k_NE = NE(x, cb);
+	int32_t q_NE = ZEXT(k_NE);
+	bool r_LT = LT(x, y);
+	int32_t z_LT = ZEXT(r_LT);
+	bool k_LT = LT(x, cb);
+	int32_t q_LT = ZEXT(k_LT);
+	bool r_GE = GE(x, y);
+	int32_t z_GE = ZEXT(r_GE);
+	bool k_GE = GE(x, cb);
+	int32_t q_GE = ZEXT(k_GE);
+	bool r_LE = LE(x, y);
+	int32_t z_LE = ZEXT(r_LE);
+	bool k_LE = LE(x, cb);
+	int32_t q_LE = ZEXT(k_LE);
+	bool r_GT = GT(x, y);
+	int32_t z_GT = ZEXT(r_GT);
+	bool k_GT = GT(x, cb);
+	int32_t q_GT = ZEXT(k_GT);
+	bool r_ULT = ULT(x, y);
+	int32_t z_ULT = ZEXT(r_ULT);
+	bool k_ULT = ULT(x, cb);
+	int32_t q_ULT = ZEXT(k_ULT);
+	bool r_UGE = UGE(x, y);
+	int32_t z_UGE = ZEXT(r_UGE);
+	bool k_UGE = UGE(x, cb);
+	int32_t q_UGE = ZEXT(k_UGE);
+	bool r_ULE = ULE(x, y);
+	int32_t z_ULE = ZEXT(r_ULE);
+	bool k_ULE = ULE(x, cb);
+	int32_t q_ULE = ZEXT(k_ULE);
+	bool r_UGT = UGT(x, y);
+	int32_t z_UGT = ZEXT(r_UGT);
+	bool k_UGT = UGT(x, cb);
+	int32_t q_UGT = ZEXT(k_UGT);
+	l_2 = CALL/21(l_1, fp, fmt, z_EQ, q_EQ, z_NE, q_NE, z_LT, q_LT, z_GE, q_GE, z_LE, q_LE, z_GT, q_GT, z_ULT, q_ULT, z_UGE, q_UGE, z_ULE, q_ULE, z_UGT, q_UGT);
+	l_3 = RETURN(l_2);
+}
+func @cmp_i16(int16_t, int16_t): void;
+func @cmp_i16(int16_t, int16_t): void
+{
+	int16_t cb = 16;
+	uintptr_t fp = func @printf(uintptr_t, ...): int32_t;
+	uintptr_t fmt = "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d\n";
+	l_1 = START(l_3);
+	int16_t x = PARAM(l_1, "x", 1);
+	int16_t y = PARAM(l_1, "y", 2);
+	bool r_EQ = EQ(x, y);
+	int32_t z_EQ = ZEXT(r_EQ);
+	bool k_EQ = EQ(x, cb);
+	int32_t q_EQ = ZEXT(k_EQ);
+	bool r_NE = NE(x, y);
+	int32_t z_NE = ZEXT(r_NE);
+	bool k_NE = NE(x, cb);
+	int32_t q_NE = ZEXT(k_NE);
+	bool r_LT = LT(x, y);
+	int32_t z_LT = ZEXT(r_LT);
+	bool k_LT = LT(x, cb);
+	int32_t q_LT = ZEXT(k_LT);
+	bool r_GE = GE(x, y);
+	int32_t z_GE = ZEXT(r_GE);
+	bool k_GE = GE(x, cb);
+	int32_t q_GE = ZEXT(k_GE);
+	bool r_LE = LE(x, y);
+	int32_t z_LE = ZEXT(r_LE);
+	bool k_LE = LE(x, cb);
+	int32_t q_LE = ZEXT(k_LE);
+	bool r_GT = GT(x, y);
+	int32_t z_GT = ZEXT(r_GT);
+	bool k_GT = GT(x, cb);
+	int32_t q_GT = ZEXT(k_GT);
+	bool r_ULT = ULT(x, y);
+	int32_t z_ULT = ZEXT(r_ULT);
+	bool k_ULT = ULT(x, cb);
+	int32_t q_ULT = ZEXT(k_ULT);
+	bool r_UGE = UGE(x, y);
+	int32_t z_UGE = ZEXT(r_UGE);
+	bool k_UGE = UGE(x, cb);
+	int32_t q_UGE = ZEXT(k_UGE);
+	bool r_ULE = ULE(x, y);
+	int32_t z_ULE = ZEXT(r_ULE);
+	bool k_ULE = ULE(x, cb);
+	int32_t q_ULE = ZEXT(k_ULE);
+	bool r_UGT = UGT(x, y);
+	int32_t z_UGT = ZEXT(r_UGT);
+	bool k_UGT = UGT(x, cb);
+	int32_t q_UGT = ZEXT(k_UGT);
+	l_2 = CALL/21(l_1, fp, fmt, z_EQ, q_EQ, z_NE, q_NE, z_LT, q_LT, z_GE, q_GE, z_LE, q_LE, z_GT, q_GT, z_ULT, q_ULT, z_UGE, q_UGE, z_ULE, q_ULE, z_UGT, q_UGT);
+	l_3 = RETURN(l_2);
+}
+func @main(): int32_t
+{
+	uintptr_t f_cmp_u8 = func @cmp_u8(uint8_t, uint8_t): void;
+	uint8_t a_cmp_u8 = 200;
+	uint8_t b_cmp_u8 = 100;
+	uintptr_t f_cmp_i8 = func @cmp_i8(int8_t, int8_t): void;
+	int8_t a_cmp_i8 = -56;
+	int8_t b_cmp_i8 = 100;
+	uintptr_t f_cmp_u16 = func @cmp_u16(uint16_t, uint16_t): void;
+	uint16_t a_cmp_u16 = 36864;
+	uint16_t b_cmp_u16 = 16;
+	uintptr_t f_cmp_i16 = func @cmp_i16(int16_t, int16_t): void;
+	int16_t a_cmp_i16 = -28672;
+	int16_t b_cmp_i16 = 16;
+	int32_t z = 0;
+	l_1 = START(l_6);
+	l_2 = CALL/2(l_1, f_cmp_u8, a_cmp_u8, b_cmp_u8);
+	l_3 = CALL/2(l_2, f_cmp_i8, a_cmp_i8, b_cmp_i8);
+	l_4 = CALL/2(l_3, f_cmp_u16, a_cmp_u16, b_cmp_u16);
+	l_5 = CALL/2(l_4, f_cmp_i16, a_cmp_i16, b_cmp_i16);
+	l_6 = RETURN(l_5, z);
+}
+--EXPECT--
+0 0 1 1 1 1 0 0 1 1 0 0 0 0 1 1 0 0 1 1
+0 0 1 1 1 1 0 0 1 1 0 0 0 0 1 1 0 0 1 1
+0 0 1 1 1 1 0 0 1 1 0 0 0 0 1 1 0 0 1 1
+0 0 1 1 1 1 0 0 1 1 0 0 0 0 1 1 0 0 1 1
