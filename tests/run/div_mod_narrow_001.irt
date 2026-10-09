@@ -1,0 +1,101 @@
+--TEST--
+DIV/MOD of 8-bit and 16-bit values with not normalized upper bits
+--ARGS--
+-O1 --run
+--CODE--
+extern func @printf(uintptr_t, ...): int32_t;
+func @t8(int8_t, int8_t): void;
+func @t8(int8_t, int8_t): void
+{
+	int8_t c_1 = 1;
+	uintptr_t fp = func @printf(uintptr_t, ...): int32_t;
+	uintptr_t fmt = "%d %d\n";
+	l_1 = START(l_3);
+	int8_t x = PARAM(l_1, "x", 1);
+	int8_t y = PARAM(l_1, "y", 2);
+	int8_t s = ADD(x, c_1);
+	int8_t d = DIV(s, y);
+	int8_t m = MOD(s, y);
+	int32_t a = SEXT(d);
+	int32_t b = SEXT(m);
+	l_2 = CALL/3(l_1, fp, fmt, a, b);
+	l_3 = RETURN(l_2);
+}
+func @tu8(uint8_t, uint8_t): void;
+func @tu8(uint8_t, uint8_t): void
+{
+	uint8_t c_1 = 1;
+	uintptr_t fp = func @printf(uintptr_t, ...): int32_t;
+	uintptr_t fmt = "%d %d\n";
+	l_1 = START(l_3);
+	uint8_t x = PARAM(l_1, "x", 1);
+	uint8_t y = PARAM(l_1, "y", 2);
+	uint8_t s = ADD(x, c_1);
+	uint8_t d = DIV(s, y);
+	uint8_t m = MOD(s, y);
+	int32_t a = ZEXT(d);
+	int32_t b = ZEXT(m);
+	l_2 = CALL/3(l_1, fp, fmt, a, b);
+	l_3 = RETURN(l_2);
+}
+func @t16(int16_t, int16_t): void;
+func @t16(int16_t, int16_t): void
+{
+	int16_t c_1 = 1;
+	uintptr_t fp = func @printf(uintptr_t, ...): int32_t;
+	uintptr_t fmt = "%d %d\n";
+	l_1 = START(l_3);
+	int16_t x = PARAM(l_1, "x", 1);
+	int16_t y = PARAM(l_1, "y", 2);
+	int16_t s = ADD(x, c_1);
+	int16_t d = DIV(s, y);
+	int16_t m = MOD(s, y);
+	int32_t a = SEXT(d);
+	int32_t b = SEXT(m);
+	l_2 = CALL/3(l_1, fp, fmt, a, b);
+	l_3 = RETURN(l_2);
+}
+func @tu16(uint16_t, uint16_t): void;
+func @tu16(uint16_t, uint16_t): void
+{
+	uint16_t c_1 = 1;
+	uintptr_t fp = func @printf(uintptr_t, ...): int32_t;
+	uintptr_t fmt = "%d %d\n";
+	l_1 = START(l_3);
+	uint16_t x = PARAM(l_1, "x", 1);
+	uint16_t y = PARAM(l_1, "y", 2);
+	uint16_t s = ADD(x, c_1);
+	uint16_t d = DIV(s, y);
+	uint16_t m = MOD(s, y);
+	int32_t a = ZEXT(d);
+	int32_t b = ZEXT(m);
+	l_2 = CALL/3(l_1, fp, fmt, a, b);
+	l_3 = RETURN(l_2);
+}
+func @main(): int32_t
+{
+	uintptr_t f_t8 = func @t8(int8_t, int8_t): void;
+	uintptr_t f_tu8 = func @tu8(uint8_t, uint8_t): void;
+	uintptr_t f_t16 = func @t16(int16_t, int16_t): void;
+	uintptr_t f_tu16 = func @tu16(uint16_t, uint16_t): void;
+	int8_t a_t8 = 127;
+	int8_t b_t8 = 11;
+	uint8_t a_tu8 = 255;
+	uint8_t b_tu8 = 11;
+	int16_t a_t16 = 32767;
+	int16_t b_t16 = 11;
+	uint16_t a_tu16 = 65535;
+	uint16_t b_tu16 = 11;
+	int32_t z = 0;
+	l_1 = START(l_6);
+	l_2 = CALL/2(l_1, f_t8, a_t8, b_t8);
+	l_3 = CALL/2(l_2, f_tu8, a_tu8, b_tu8);
+	l_4 = CALL/2(l_3, f_t16, a_t16, b_t16);
+	l_5 = CALL/2(l_4, f_tu16, a_tu16, b_tu16);
+	l_6 = RETURN(l_5, z);
+}
+--EXPECT--
+-11 -7
+0 0
+-2978 -10
+0 0
