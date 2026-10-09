@@ -1,0 +1,32 @@
+--TEST--
+CTPOP when the temporary FP register is not v0
+--ARGS--
+-O1 --run
+--CODE--
+extern func @printf(uintptr_t, ...): int32_t;
+func @test(int64_t, double): int64_t;
+func @test(int64_t, double): int64_t
+{
+	l_1 = START(l_2);
+	int64_t x = PARAM(l_1, "x", 1);
+	double d = PARAM(l_1, "d", 2);
+	int64_t c = CTPOP(x);
+	int64_t b = BITCAST(d);
+	int64_t r = ADD(c, b);
+	l_2 = RETURN(l_1, r);
+}
+func @main(): int32_t
+{
+	uintptr_t ft = func @test(int64_t, double): int64_t;
+	uintptr_t fp = func @printf(uintptr_t, ...): int32_t;
+	uintptr_t fmt = "%llx\n";
+	int64_t a = 0x7000000000000001;
+	double d = 2.0;
+	int32_t z = 0;
+	l_1 = START(l_4);
+	int64_t r, l_2 = CALL/2(l_1, ft, a, d);
+	l_3 = CALL/2(l_2, fp, fmt, r);
+	l_4 = RETURN(l_3, z);
+}
+--EXPECT--
+4000000000000004

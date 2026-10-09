@@ -3589,8 +3589,9 @@ static void ir_emit_ctpop(ir_ctx *ctx, ir_ref def, ir_insn *insn)
 	ir_reg def_reg = IR_REG_NUM(ctx->regs[def][0]);
 	ir_reg op1_reg = ctx->regs[def][1];
 	ir_reg tmp_reg = ctx->regs[def][2];
-	uint32_t code1 = 0x0e205800 | (tmp_reg-IR_REG_FP_FIRST); // cnt v0.8b, v0.8b
-	uint32_t code2 = 0x0e31b800 | (tmp_reg-IR_REG_FP_FIRST); // addv b0, v0.8b
+	uint32_t tmp = tmp_reg - IR_REG_FP_FIRST;
+	uint32_t code1 = 0x0e205800 | tmp | (tmp << 5); // cnt vT.8b, vT.8b
+	uint32_t code2 = 0x0e31b800 | tmp | (tmp << 5); // addv bT, vT.8b
 
 	IR_ASSERT(def_reg != IR_REG_NONE && op1_reg != IR_REG_NONE && tmp_reg != IR_REG_NONE);
 
@@ -3604,27 +3605,27 @@ static void ir_emit_ctpop(ir_ctx *ctx, ir_ref def, ir_insn *insn)
 		case 1:
 			|	and	Rw(def_reg), Rw(op1_reg), #0xff
 			|	fmov Rs(tmp_reg-IR_REG_FP_FIRST), Rw(def_reg)
-			|	.long code1 // cnt v0.8b, v0.8b
-			|	.long code2 // addv b0, v0.8b
+			|	.long code1 // cnt vT.8b, vT.8b
+			|	.long code2 // addv bT, vT.8b
 			|	fmov Rw(def_reg), Rs(tmp_reg-IR_REG_FP_FIRST)
 			break;
 		case 2:
 			|	and	Rw(def_reg), Rw(op1_reg), #0xffff
 			|	fmov Rs(tmp_reg-IR_REG_FP_FIRST), Rw(def_reg)
-			|	.long code1 // cnt v0.8b, v0.8b
-			|	.long code2 // addv b0, v0.8b
+			|	.long code1 // cnt vT.8b, vT.8b
+			|	.long code2 // addv bT, vT.8b
 			|	fmov Rw(def_reg), Rs(tmp_reg-IR_REG_FP_FIRST)
 			break;
 		case 4:
 			|	fmov Rs(tmp_reg-IR_REG_FP_FIRST), Rw(op1_reg)
-			|	.long code1 // cnt v0.8b, v0.8b
-			|	.long code2 // addv b0, v0.8b
+			|	.long code1 // cnt vT.8b, vT.8b
+			|	.long code2 // addv bT, vT.8b
 			|	fmov Rw(def_reg), Rs(tmp_reg-IR_REG_FP_FIRST)
 			break;
 		case 8:
 			|	fmov Rd(tmp_reg-IR_REG_FP_FIRST), Rx(op1_reg)
-			|	.long code1 // cnt v0.8b, v0.8b
-			|	.long code2 // addv b0, v0.8b
+			|	.long code1 // cnt vT.8b, vT.8b
+			|	.long code2 // addv bT, vT.8b
 			|	fmov Rx(def_reg), Rd(tmp_reg-IR_REG_FP_FIRST)
 			break;
 	}
