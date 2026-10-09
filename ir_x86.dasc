@@ -12962,6 +12962,7 @@ static int32_t ir_emit_arguments(ir_ctx *ctx, ir_ref def, ir_insn *insn, const i
 	int32_t used_stack, copy_stack = 0, stack_offset = cc->shadow_store_size;
 	ir_copy *copies;
 	bool do_pass3 = 0;
+	ir_bitset preloaded = NULL;
 	/* For temporaries we may use any scratch registers except for registers used for parameters */
 	ir_reg tmp_fp_reg = IR_REG_FP_LAST; /* Temporary register for FP loads and swap */
 
@@ -13042,12 +13043,43 @@ static int32_t ir_emit_arguments(ir_ctx *ctx, ir_ref def, ir_insn *insn, const i
 |.endif
 	}
 
+	/* 0. a spilled value passed in few arguments is reloaded only once, so load it into its register */
+	for (j = 3; j <= n; j++) {
+		arg = ir_insn_op(insn, j);
+		src_reg = ir_get_alocated_reg(ctx, def, j);
+		if (arg > 0 && src_reg != IR_REG_NONE && IR_REG_SPILLED(src_reg) && ctx->ir_base[arg].op != IR_ARGVAL) {
+			int k;
+
+#if IR_X86_I64
+			if (ctx->ir_base[arg].type == IR_I64 || ctx->ir_base[arg].type == IR_U64) {
+				continue;
+			}
+#endif
+			for (k = 3; k <= n; k++) {
+				if (k != j && ir_insn_op(insn, k) == arg) {
+					break;
+				}
+			}
+			if (k <= n) {
+				if (!preloaded) {
+					preloaded = alloca(ir_bitset_len(n + 1) * IR_BITSET_BITS / 8);
+					ir_bitset_clear(preloaded, ir_bitset_len(n + 1));
+				}
+				ir_emit_load(ctx, ctx->ir_base[arg].type, IR_REG_NUM(src_reg), arg);
+				ir_bitset_incl(preloaded, j);
+			}
+		}
+	}
+
 	/* 1. move all register arguments that should be passed through stack
 	 *    and collect arguments that should be passed through registers */
 	copies = ir_mem_malloc((n - 2) * sizeof(ir_copy));
 	for (j = 3; j <= n; j++) {
 		arg = ir_insn_op(insn, j);
 		src_reg = ir_get_alocated_reg(ctx, def, j);
+		if (preloaded && ir_bitset_in(preloaded, j)) {
+			src_reg = IR_REG_NUM(src_reg);
+		}
 		arg_insn = &ctx->ir_base[arg];
 		type = arg_insn->type;
 		if (IR_IS_TYPE_INT(type)) {
@@ -13202,6 +13234,9 @@ static int32_t ir_emit_arguments(ir_ctx *ctx, ir_ref def, ir_insn *insn, const i
 		for (j = 3; j <= n; j++) {
 			arg = ir_insn_op(insn, j);
 			src_reg = ir_get_alocated_reg(ctx, def, j);
+			if (preloaded && ir_bitset_in(preloaded, j)) {
+				src_reg = IR_REG_NUM(src_reg);
+			}
 			arg_insn = &ctx->ir_base[arg];
 			type = arg_insn->type;
 			if (IR_IS_TYPE_INT(type)) {
