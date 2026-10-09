@@ -2969,6 +2969,8 @@ static void ir_emit_binop_int(ir_ctx *ctx, ir_ref def, ir_insn *insn)
 	}
 }
 
+static void ir_emit_cmp_int_common(ir_ctx *ctx, ir_type type, ir_reg op1_reg, ir_ref op1, ir_reg op2_reg, ir_ref op2);
+
 static void ir_emit_min_max_int(ir_ctx *ctx, ir_ref def, ir_insn *insn)
 {
 	ir_backend_data *data = ctx->data;
@@ -3000,8 +3002,8 @@ static void ir_emit_min_max_int(ir_ctx *ctx, ir_ref def, ir_insn *insn)
 		ir_emit_load(ctx, type, op2_reg, op2);
 	}
 
+	ir_emit_cmp_int_common(ctx, type, op1_reg, op1, op2_reg, op2);
 	if (ir_type_size[type] == 8) {
-		|	cmp Rx(op1_reg), Rx(op2_reg)
 		if (insn->op == IR_MIN) {
 			if (IR_IS_TYPE_SIGNED(type)) {
 				|	csel Rx(def_reg), Rx(op1_reg), Rx(op2_reg), le
@@ -3017,7 +3019,6 @@ static void ir_emit_min_max_int(ir_ctx *ctx, ir_ref def, ir_insn *insn)
 			}
 		}
 	} else {
-		|	cmp Rw(op1_reg), Rw(op2_reg)
 		if (insn->op == IR_MIN) {
 			if (IR_IS_TYPE_SIGNED(type)) {
 				|	csel Rw(def_reg), Rw(op1_reg), Rw(op2_reg), le
