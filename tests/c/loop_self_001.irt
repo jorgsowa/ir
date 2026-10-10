@@ -1,0 +1,17 @@
+--TEST--
+001: single-block infinite loop (self-successor) doesn't hang ir_emit_c (-O0)
+--ARGS--
+-O0 --emit-c
+--CODE--
+{
+	l_1 = START(l_4);
+	l_2 = END(l_1);
+	l_3 = LOOP_BEGIN(l_2, l_4);
+	l_4 = LOOP_END(l_3);
+}
+--EXPECT--
+void test(void)
+{
+bb2:
+	goto bb2;
+}
