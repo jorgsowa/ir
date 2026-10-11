@@ -628,6 +628,7 @@ ir_insn(ir_parser_ctx *p):
 		const(t, &val)
 		{ref = ir_const(p->ctx, val, t);}
 	|	"{"
+		{if (!IR_IS_TYPE_VECTOR(t)) yy_error("vector type expected for constant initializer");}
 		{ref = ir_const_vector(p->ctx, t);}
 		{ptr = ir_long_const_ptr(p->ctx, ref);}
 		{memset(ptr, 0, IR_VECTOR_SIZE(t));}
