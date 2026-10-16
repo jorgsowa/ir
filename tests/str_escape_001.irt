@@ -1,0 +1,19 @@
+--TEST--
+STR escape 001: non-ASCII bytes are printed as is, control bytes are escaped
+--ARGS--
+--save
+--CODE--
+{
+	uintptr_t c_1 = "A\303\251Z\001";
+	l_1 = START(l_2);
+	l_2 = RETURN(l_1, c_1);
+}
+--EXPECT--
+{
+	uintptr_t c_1 = 0;
+	bool c_2 = 0;
+	bool c_3 = 1;
+	uintptr_t c_4 = "AéZ\001";
+	l_1 = START(l_2);
+	l_2 = RETURN(l_1, c_4);
+}
