@@ -611,7 +611,7 @@ ir_insn(ir_parser_ctx *p):
 	{uint32_t flags;}
 	{uint32_t params_count;}
 	{uint8_t param_types[IR_MAX_OPERANDS + 1];}
-	{void *ptr;}
+	{void *ptr, *end;}
 	{ir_type t2;}
 	(
 		type(&t)
@@ -631,10 +631,12 @@ ir_insn(ir_parser_ctx *p):
 		{ref = ir_const_vector(p->ctx, t);}
 		{ptr = ir_long_const_ptr(p->ctx, ref);}
 		{memset(ptr, 0, IR_VECTOR_SIZE(t));}
+		{end = (char*)ptr + IR_VECTOR_SIZE(t);}
 		{t2 = IR_VECTOR_BASE_TYPE(t);}
 		(
 			const(t2, &val)
 			{
+				if (ptr == end) yy_error("too many vector elements");
 				switch (ir_type_size[t2]) {
 					case 1: *(uint8_t*)ptr  = val.u8;  ptr = (char*)ptr + 1; break;
 					case 2: *(uint16_t*)ptr = val.u16; ptr = (char*)ptr + 2; break;
@@ -649,6 +651,7 @@ ir_insn(ir_parser_ctx *p):
 				","
 				const(t2, &val)
 				{
+					if (ptr == end) yy_error("too many vector elements");
 					switch (ir_type_size[t2]) {
 						case 1: *(uint8_t*)ptr  = val.u8;  ptr = (char*)ptr + 1; break;
 						case 2: *(uint16_t*)ptr = val.u16; ptr = (char*)ptr + 2; break;
