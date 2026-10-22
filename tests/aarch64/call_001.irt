@@ -1,0 +1,31 @@
+--TEST--
+001: call: 8/16-bit arguments are not extended
+--TARGET--
+aarch64-*-sysv
+--ARGS--
+-S
+--CODE--
+{
+	l_1 = START(l_4);
+	uintptr_t p = PARAM(l_1, "p", 1);
+	int32_t x = PARAM(l_1, "x", 2);
+	int32_t y = PARAM(l_1, "y", 3);
+	int8_t a = TRUNC(x);
+	uint16_t b = TRUNC(y);
+	int8_t a2 = ADD(a, a);
+	uint16_t b2 = ADD(b, b);
+	int32_t r1, l_2 = CALL/2(l_1, p, a2, b2);
+	l_4 = RETURN(l_2, r1);
+}
+--EXPECT--
+test:
+	stp x29, x30, [sp, #-0x10]!
+	mov x29, sp
+	mov x3, x0
+	and w0, w1, #0xff
+	and w1, w2, #0xffff
+	add w0, w0, w0
+	add w1, w1, w1
+	blr x3
+	ldp x29, x30, [sp], #0x10
+	ret

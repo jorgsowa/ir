@@ -1,7 +1,7 @@
 --TEST--
 006: mul function
 --TARGET--
-aarch64
+aarch64-*-sysv
 --ARGS--
 -S
 --CODE--
