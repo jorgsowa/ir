@@ -1341,8 +1341,12 @@ static uint32_t _ir_skip_empty_blocks(const ir_ctx *ctx, uint32_t b)
 		ir_block *bb = &ctx->cfg_blocks[b];
 
 		if ((bb->flags & (IR_BB_START|IR_BB_ENTRY|IR_BB_EMPTY)) == IR_BB_EMPTY) {
-			IR_ASSERT(bb->successors_count == 1);
-			b = ctx->cfg_edges[bb->successors];
+			uint32_t target = ctx->cfg_edges[bb->successors];
+			/* Avoid infinite loop on self-loop blocks */
+			if (target == b) {
+				return b;
+			}
+			b = target;
 		} else {
 			return b;
 		}
