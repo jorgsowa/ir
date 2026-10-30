@@ -243,8 +243,8 @@ bool ir_check(const ir_ctx *ctx)
 												/* second argument of SHIFT may be incompatible with result */
 												break;
 											}
-											if (insn->op == IR_NOT && insn->type == IR_BOOL) {
-												/* boolean not */
+											if (insn->op == IR_NOT && insn->type == IR_BOOL && IR_IS_TYPE_INT(use_insn->type)) {
+												/* boolean not; FP operands must use EQ(x, 0.0) */
 												break;
 											}
 											if (insn->type == IR_ADDR && (use_insn->type == IR_UINTPTR_T || use_insn->type == IR_INTPTR_T)) {
