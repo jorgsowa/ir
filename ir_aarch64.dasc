@@ -3790,7 +3790,7 @@ static void ir_emit_op_int(ir_ctx *ctx, ir_ref def, ir_insn *insn)
 		ir_emit_load(ctx, src_type, op1_reg, op1);
 	}
 	if (insn->op == IR_NOT) {
-		if (src_type == IR_BOOL) {
+		if (insn->type == IR_BOOL) {
 			|	ASM_REG_IMM_OP cmp, src_type, op1_reg, 0
 			|	cset Rw(def_reg), eq
 		} else {

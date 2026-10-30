@@ -1,0 +1,36 @@
+--TEST--
+Boolean NOT of an integer operand
+--ARGS--
+--run
+--CODE--
+extern func printf(uintptr_t, ...): int32_t;
+func test(int32_t): bool;
+func main(): int32_t;
+static const _str [10] = "%d %d %d\n\000";
+func test(int32_t): bool
+{
+	l_1 = START(l_4);
+	int32_t x = PARAM(l_1, "x", 1);
+	bool ret = NOT(x);
+	l_4 = RETURN(l_1, ret);
+}
+func main(): int32_t
+{
+	int32_t c_1 = 0;
+	int32_t c_2 = 1;
+	int32_t c_3 = 256;
+	uintptr_t c_4 = func test(int32_t): bool;
+	uintptr_t c_5 = sym(_str);
+	uintptr_t c_6 = func printf(uintptr_t, ...): int32_t;
+	l_1 = START(l_8);
+	bool d_2, l_2 = CALL/1(l_1, c_4, c_1);
+	bool d_3, l_3 = CALL/1(l_2, c_4, c_2);
+	bool d_4, l_4 = CALL/1(l_3, c_4, c_3);
+	int32_t d_5 = ZEXT(d_2);
+	int32_t d_6 = ZEXT(d_3);
+	int32_t d_7 = ZEXT(d_4);
+	int32_t d_8, l_7 = CALL/4(l_4, c_6, c_5, d_5, d_6, d_7);
+	l_8 = RETURN(l_7, c_1);
+}
+--EXPECT--
+1 0 0
