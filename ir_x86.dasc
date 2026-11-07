@@ -1996,6 +1996,14 @@ op2_const:
 			} else {
 				flags = IR_USE_MUST_BE_IN_REG | IR_OP1_SHOULD_BE_IN_REG | IR_OP2_SHOULD_BE_IN_REG | IR_OP3_SHOULD_BE_IN_REG;
 			}
+#if IR_X86_I64
+			if (rule == IR_COND
+			 && (ctx->ir_base[insn->op1].type == IR_I64 || ctx->ir_base[insn->op1].type == IR_U64)) {
+				/* 4-th temporary is stored in ctx->tmp_regs */
+				constraints->tmp_regs[n] = IR_TMP_REG(4, IR_U32, IR_LOAD_SUB_REF, IR_DEF_SUB_REF);
+				n++;
+			}
+#endif
 			break;
 		case IR_COND_CMP_FP:
 			flags = IR_USE_MUST_BE_IN_REG | IR_OP1_SHOULD_BE_IN_REG | IR_OP2_SHOULD_BE_IN_REG | IR_OP3_SHOULD_BE_IN_REG;
@@ -5079,7 +5087,7 @@ store_int:
 						return IR_COND_CMP_FP;
 					}
 #if IR_X86_I64
-				} else if (insn->type == IR_I64 || insn->type == IR_U64) {
+				} else if (insn->type == IR_I64 || insn->type == IR_U64 || op1_insn->type == IR_I64 || op1_insn->type == IR_U64) {
 					/* pass */
 #endif
 				} else if (op1_insn->op == IR_AND) {
@@ -9811,6 +9819,12 @@ static void ir_emit_cond(ir_ctx *ctx, ir_ref def, ir_insn *insn)
 	}
 	if (op1_reg != IR_REG_NONE && IR_REG_SPILLED(op1_reg)) {
 		op1_reg = IR_REG_NUM(op1_reg);
+#if IR_X86_I64
+		if (op1_type == IR_I64 || op1_type == IR_U64) {
+			ir_emit_load_i64_lo(ctx, IR_REG_I64_LO(op1_reg), op1);
+			ir_emit_load_i64_hi(ctx, IR_REG_I64_HI(op1_reg), op1);
+		} else
+#endif
 		ir_emit_load(ctx, op1_type, op1_reg, op1);
 	}
 
@@ -9839,6 +9853,32 @@ static void ir_emit_cond(ir_ctx *ctx, ir_ref def, ir_insn *insn)
 	}
 
 	if (IR_IS_TYPE_INT(op1_type)) {
+#if IR_X86_I64
+		if (op1_type == IR_I64 || op1_type == IR_U64) {
+			ir_reg tmp_reg;
+
+			IR_ASSERT(ctx->tmp_regs && ctx->tmp_regs[def] != IR_REG_NONE);
+			tmp_reg = ctx->tmp_regs[def];
+			if (op1_reg != IR_REG_NONE) {
+				ir_reg op1_reg_lo = IR_REG_I64_LO(op1_reg);
+				ir_reg op1_reg_hi = IR_REG_I64_HI(op1_reg);
+
+				|	mov Rd(tmp_reg), Rd(op1_reg_lo)
+				|	or Rd(tmp_reg), Rd(op1_reg_hi)
+			} else {
+				ir_mem mem, mem_hi;
+
+				if (ir_rule(ctx, insn->op1) & IR_FUSED) {
+					mem = ir_fuse_load(ctx, def, insn->op1);
+				} else {
+					mem = ir_ref_spill_slot(ctx, insn->op1);
+				}
+				mem_hi = IR_MEM_I64_HI(mem);
+				|	ASM_REG_MEM_OP mov, IR_U32, tmp_reg, mem
+				|	ASM_REG_MEM_OP or, IR_U32, tmp_reg, mem_hi
+			}
+		} else
+#endif
 		if (op1_reg != IR_REG_NONE) {
 			|	ASM_REG_REG_OP test, op1_type, op1_reg, op1_reg
 		} else {

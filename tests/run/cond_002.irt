@@ -1,0 +1,95 @@
+--TEST--
+COND with a 64-bit condition and a narrower result
+--ARGS--
+--run
+--CODE--
+extern func printf(uintptr_t, ...): int32_t;
+func cond_mem(int64_t): int32_t
+{
+	int32_t one = 1;
+	int32_t two = 2;
+	l_1 = START(l_2);
+	int64_t x = PARAM(l_1, "x", 1);
+	int32_t r = COND(x, one, two);
+	l_2 = RETURN(l_1, r);
+}
+func cond_reg(int64_t, int64_t): int32_t
+{
+	int32_t one = 1;
+	int32_t two = 2;
+	l_1 = START(l_2);
+	int64_t x = PARAM(l_1, "x", 1);
+	int64_t y = PARAM(l_1, "y", 2);
+	int64_t s = ADD(x, y);
+	int32_t r = COND(s, one, two);
+	l_2 = RETURN(l_1, r);
+}
+func cond_and(int64_t, int64_t): int32_t
+{
+	int32_t one = 1;
+	int32_t two = 2;
+	l_1 = START(l_2);
+	int64_t x = PARAM(l_1, "x", 1);
+	int64_t y = PARAM(l_1, "y", 2);
+	int64_t a = AND(x, y);
+	int32_t r = COND(a, one, two);
+	l_2 = RETURN(l_1, r);
+}
+func cond_load(uintptr_t): int32_t
+{
+	int32_t one = 1;
+	int32_t two = 2;
+	l_1 = START(l_3);
+	uintptr_t p = PARAM(l_1, "p", 1);
+	int64_t v, l_2 = LOAD(l_1, p);
+	int32_t r = COND(v, one, two);
+	l_3 = RETURN(l_2, r);
+}
+func cond_dbl(int64_t): double
+{
+	double one = 1.5;
+	double two = 2.5;
+	l_1 = START(l_2);
+	int64_t x = PARAM(l_1, "x", 1);
+	double r = COND(x, one, two);
+	l_2 = RETURN(l_1, r);
+}
+func main(): int32_t
+{
+	uintptr_t fmt = "%d %d %d | %d %d %d | %d %d %d | %d %d %d | %g %g %g\n";
+	uintptr_t print = func printf(uintptr_t, ...): int32_t;
+	uintptr_t f_mem = func cond_mem(int64_t): int32_t;
+	uintptr_t f_reg = func cond_reg(int64_t, int64_t): int32_t;
+	uintptr_t f_and = func cond_and(int64_t, int64_t): int32_t;
+	uintptr_t f_load = func cond_load(uintptr_t): int32_t;
+	uintptr_t f_dbl = func cond_dbl(int64_t): double;
+	uintptr_t size = 8;
+	int32_t zero = 0;
+	int64_t z = 0;
+	int64_t lo = 256;
+	int64_t hi = 4294967296;
+	l_1 = START(l_22);
+	uintptr_t m, l_2 = ALLOCA(l_1, size);
+	int32_t a1, l_3 = CALL/1(l_2, f_mem, z);
+	int32_t a2, l_4 = CALL/1(l_3, f_mem, lo);
+	int32_t a3, l_5 = CALL/1(l_4, f_mem, hi);
+	int32_t b1, l_6 = CALL/2(l_5, f_reg, z, z);
+	int32_t b2, l_7 = CALL/2(l_6, f_reg, lo, z);
+	int32_t b3, l_8 = CALL/2(l_7, f_reg, hi, z);
+	int32_t c1, l_9 = CALL/2(l_8, f_and, z, lo);
+	int32_t c2, l_10 = CALL/2(l_9, f_and, lo, lo);
+	int32_t c3, l_11 = CALL/2(l_10, f_and, hi, hi);
+	l_12 = STORE(l_11, m, z);
+	int32_t d1, l_13 = CALL/1(l_12, f_load, m);
+	l_14 = STORE(l_13, m, lo);
+	int32_t d2, l_15 = CALL/1(l_14, f_load, m);
+	l_16 = STORE(l_15, m, hi);
+	int32_t d3, l_17 = CALL/1(l_16, f_load, m);
+	double e1, l_18 = CALL/1(l_17, f_dbl, z);
+	double e2, l_19 = CALL/1(l_18, f_dbl, lo);
+	double e3, l_20 = CALL/1(l_19, f_dbl, hi);
+	int32_t p, l_21 = CALL/16(l_20, print, fmt, a1, a2, a3, b1, b2, b3, c1, c2, c3, d1, d2, d3, e1, e2, e3);
+	l_22 = RETURN(l_21, zero);
+}
+--EXPECT--
+2 1 1 | 2 1 1 | 2 1 1 | 2 1 1 | 2.5 1.5 1.5
