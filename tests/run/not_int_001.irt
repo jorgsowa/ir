@@ -1,0 +1,71 @@
+--TEST--
+Boolean NOT of integer values
+--ARGS--
+--run
+--CODE--
+extern func printf(uintptr_t, ...): int32_t;
+func not_i32(int32_t): int32_t
+{
+	l_1 = START(l_2);
+	int32_t d_1 = PARAM(l_1, "x", 1);
+	bool d_2 = NOT(d_1);
+	int32_t d_3 = ZEXT(d_2);
+	l_2 = RETURN(l_1, d_3);
+}
+func not_u8(uint8_t): int32_t
+{
+	l_1 = START(l_2);
+	uint8_t d_1 = PARAM(l_1, "x", 1);
+	bool d_2 = NOT(d_1);
+	int32_t d_3 = ZEXT(d_2);
+	l_2 = RETURN(l_1, d_3);
+}
+func not_i16(int16_t): int32_t
+{
+	l_1 = START(l_2);
+	int16_t d_1 = PARAM(l_1, "x", 1);
+	bool d_2 = NOT(d_1);
+	int32_t d_3 = ZEXT(d_2);
+	l_2 = RETURN(l_1, d_3);
+}
+func not_i64(int64_t): int32_t
+{
+	l_1 = START(l_2);
+	int64_t d_1 = PARAM(l_1, "x", 1);
+	bool d_2 = NOT(d_1);
+	int32_t d_3 = ZEXT(d_2);
+	l_2 = RETURN(l_1, d_3);
+}
+func main(void): int32_t
+{
+	uintptr_t c_printf = func printf(uintptr_t, ...): int32_t;
+	uintptr_t c_fmt = "%d%d%d %d%d %d%d %d%d\n";
+	uintptr_t c_not_i32 = func not_i32(int32_t): int32_t;
+	uintptr_t c_not_u8 = func not_u8(uint8_t): int32_t;
+	uintptr_t c_not_i16 = func not_i16(int16_t): int32_t;
+	uintptr_t c_not_i64 = func not_i64(int64_t): int32_t;
+	int32_t c_v1 = 0;
+	int32_t c_v2 = 5;
+	int32_t c_v3 = -1;
+	uint8_t c_v4 = 0;
+	uint8_t c_v5 = 255;
+	int16_t c_v6 = 0;
+	int16_t c_v7 = 256;
+	int64_t c_v8 = 0;
+	int64_t c_v9 = 4294967296;
+	int32_t c_ret = 0;
+	l_1 = START(l_99);
+	int32_t r_1, l_2 = CALL/1(l_1, c_not_i32, c_v1);
+	int32_t r_2, l_3 = CALL/1(l_2, c_not_i32, c_v2);
+	int32_t r_3, l_4 = CALL/1(l_3, c_not_i32, c_v3);
+	int32_t r_4, l_5 = CALL/1(l_4, c_not_u8, c_v4);
+	int32_t r_5, l_6 = CALL/1(l_5, c_not_u8, c_v5);
+	int32_t r_6, l_7 = CALL/1(l_6, c_not_i16, c_v6);
+	int32_t r_7, l_8 = CALL/1(l_7, c_not_i16, c_v7);
+	int32_t r_8, l_9 = CALL/1(l_8, c_not_i64, c_v8);
+	int32_t r_9, l_10 = CALL/1(l_9, c_not_i64, c_v9);
+	int32_t d_p, l_50 = CALL/10(l_10, c_printf, c_fmt, r_1, r_2, r_3, r_4, r_5, r_6, r_7, r_8, r_9);
+	l_99 = RETURN(l_50, c_ret);
+}
+--EXPECT--
+100 10 10 10

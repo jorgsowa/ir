@@ -3814,8 +3814,17 @@ static void ir_emit_op_int(ir_ctx *ctx, ir_ref def, ir_insn *insn)
 		ir_emit_load(ctx, src_type, op1_reg, op1);
 	}
 	if (insn->op == IR_NOT) {
-		if (src_type == IR_BOOL) {
-			|	ASM_REG_IMM_OP cmp, src_type, op1_reg, 0
+		if (insn->type == IR_BOOL) {
+			/* upper bits of narrow non-boolean operands are undefined */
+			if (src_type == IR_BOOL) {
+				|	ASM_REG_IMM_OP cmp, src_type, op1_reg, 0
+			} else if (ir_type_size[src_type] == 1) {
+				|	tst Rw(op1_reg), #0xff
+			} else if (ir_type_size[src_type] == 2) {
+				|	tst Rw(op1_reg), #0xffff
+			} else {
+				|	ASM_REG_IMM_OP cmp, src_type, op1_reg, 0
+			}
 			|	cset Rw(def_reg), eq
 		} else {
 			|	ASM_REG_REG_OP mvn, src_type, def_reg, op1_reg
