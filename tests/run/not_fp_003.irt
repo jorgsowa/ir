@@ -1,0 +1,37 @@
+--TEST--
+Branch on boolean NOT of FP value
+--ARGS--
+--run
+--CODE--
+extern func printf(uintptr_t, ...): int32_t;
+func not_if(double): int32_t
+{
+	int32_t c_1 = 1;
+	int32_t c_0 = 0;
+	l_1 = START(l_7);
+	double d_1 = PARAM(l_1, "x", 1);
+	bool d_2 = NOT(d_1);
+	l_2 = IF(l_1, d_2);
+	l_3 = IF_TRUE(l_2);
+	l_4 = RETURN(l_3, c_1);
+	l_5 = IF_FALSE(l_2);
+	l_7 = RETURN(l_5, c_0, l_4);
+}
+func main(void): int32_t
+{
+	uintptr_t c_printf = func printf(uintptr_t, ...): int32_t;
+	uintptr_t c_fmt = "%d%d%d\n";
+	uintptr_t c_f = func not_if(double): int32_t;
+	double c_d0 = 0.0;
+	double c_d1 = 1.5;
+	double c_dnan = nan;
+	int32_t c_ret = 0;
+	l_1 = START(l_99);
+	int32_t r_1, l_2 = CALL/1(l_1, c_f, c_d0);
+	int32_t r_2, l_3 = CALL/1(l_2, c_f, c_d1);
+	int32_t r_3, l_4 = CALL/1(l_3, c_f, c_dnan);
+	int32_t d_p, l_5 = CALL/4(l_4, c_printf, c_fmt, r_1, r_2, r_3);
+	l_99 = RETURN(l_5, c_ret);
+}
+--EXPECT--
+100

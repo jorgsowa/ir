@@ -3683,7 +3683,9 @@ static ir_ref ir_iter_optimize_condition(ir_ctx *ctx, ir_ref control, ir_ref con
 
 	IR_ASSERT(IR_IS_TYPE_SCALAR(condition_insn->type));
 
-	if (condition_insn->opt == IR_OPT(IR_NOT, IR_BOOL)) {
+	/* native backends can't branch on FP values directly */
+	if (condition_insn->opt == IR_OPT(IR_NOT, IR_BOOL)
+	 && !IR_IS_TYPE_FP(ctx->ir_base[condition_insn->op1].type)) {
 		*swap = 1;
 		condition = condition_insn->op1;
 		condition_insn = &ctx->ir_base[condition];
