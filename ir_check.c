@@ -385,6 +385,15 @@ bool ir_check(const ir_ctx *ctx)
 					ok = 0;
 				}
 				break;
+			case IR_NOT:
+				/* boolean NOT of FP means "x == 0.0", bitwise NOT of FP is undefined */
+				if (insn->type != IR_BOOL
+				 && insn->op1 < ctx->insns_count
+				 && IR_IS_TYPE_FP(ctx->ir_base[insn->op1].type)) {
+					fprintf(stderr, "ir_base[%d].op1 must not be FP for non-boolean NOT\n", i);
+					ok = 0;
+				}
+				break;
 		}
 
 		if (ctx->use_lists) {
