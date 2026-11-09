@@ -1,0 +1,21 @@
+--TEST--
+NOT(NOT(x)) is not folded into x for boolean NOT of non-boolean x
+--CODE--
+{
+	l_1 = START(l_4);
+	double d_2 = PARAM(l_1, "x", 1);
+	bool d_3 = NOT(d_2);
+	bool d_4 = NOT(d_3);
+	l_4 = RETURN(l_1, d_4);
+}
+--EXPECT--
+{
+	uintptr_t c_1 = 0;
+	bool c_2 = 0;
+	bool c_3 = 1;
+	l_1 = START(l_5);
+	double d_2 = PARAM(l_1, "x", 1);
+	bool d_3 = NOT(d_2);
+	bool d_4 = NOT(d_3);
+	l_5 = RETURN(l_1, d_4);
+}
